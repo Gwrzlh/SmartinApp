@@ -47,4 +47,18 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
+    /**
+     * Validasi bahwa role hanya nilai yang diizinkan
+     */
+    protected static function booted()
+    {
+        static::saving(function ($model) {
+            $validRoles = ['admin', 'owner', 'kasir'];
+
+            if (!in_array($model->role, $validRoles)) {
+                throw new \Exception('Role tidak valid: ' . $model->role);
+            }
+        });
+    }
 }
