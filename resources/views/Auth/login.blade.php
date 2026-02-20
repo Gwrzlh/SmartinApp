@@ -38,7 +38,7 @@
                 </div>
             @endif
 
-            <form action="{{ route('login.post') }}" method="POST" class="space-y-5">
+            <form id="loginForm" action="{{ route('login.post') }}" method="POST" class="space-y-5">
                 @csrf
                 <div>
                     <label for="email_or_username" class="block text-sm font-medium text-cyan-500 mb-1">Username</label>
@@ -50,8 +50,24 @@
                     <input type="password" name="password" id="password" required
                         class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-200" placeholder="Masukkan password">
                 </div>
-                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition">Login</button>
+                <button id="submitBtn" type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition flex items-center justify-center">
+                    <span id="btnText">Login</span>
+                    <svg id="btnSpinner" class="hidden animate-spin h-5 w-5 ml-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                    </svg>
+                </button>
             </form>
+            <script>
+                document.getElementById('loginForm').addEventListener('submit', function() {
+                    const btn = document.getElementById('submitBtn');
+                    const text = document.getElementById('btnText');
+                    const spinner = document.getElementById('btnSpinner');
+                    btn.disabled = true;
+                    text.textContent = 'Loading...';
+                    spinner.classList.remove('hidden');
+                });
+            </script>
         </div>
     </div>
 </body>

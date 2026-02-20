@@ -73,20 +73,19 @@ class authController extends Controller
         }
 
         // 5. CEGAH LOGIN USER INACTIVE (opsional, jika ada column is_active)
-        // if (!$user->is_active) {
-        //     Log::warning('Login attempt user inactive', ['user_id' => $user->id]);
-        //     throw ValidationException::withMessages([
-        //         'email_or_username' => 'User sudah dinonaktifkan. Hubungi administrator.',
-        //     ]);
-        // }
+        if (!$user->is_active) {
+            Log::warning('Login attempt user inactive', ['user_id' => $user->id]);
+            throw ValidationException::withMessages([
+                'email_or_username' => 'User sudah dinonaktifkan. Hubungi administrator.',
+            ]);
+        }
 
         // 6. LOGIN USER (create session)
         Auth::login($user, remember: $request->boolean('remember'));
 
-        // 7. REGENERATE SESSION (prevent session fixation attack)
+       
         $request->session()->regenerate();
 
-        // 8. LOG SUCCESSFUL LOGIN
         Log::info('User berhasil login', [
             'user_id' => $user->id,
             'email' => $user->email,
@@ -96,7 +95,7 @@ class authController extends Controller
             'timestamp' => now(),
         ]);
 
-        // 9. REDIRECT BASED ON ROLE
+
         return $this->redirectByRole($user);
     }
 
@@ -105,6 +104,9 @@ class authController extends Controller
      */
     private function redirectByRole($user)
     {
+        
+
+
         return match($user->role) {
             'admin' => redirect()->route('admin.dashboard')
                 ->with('success', 'Selamat datang, ' . $user->full_name . '!'),

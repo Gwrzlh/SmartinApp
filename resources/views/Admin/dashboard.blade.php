@@ -27,8 +27,8 @@
                 </div>
                 
                 <div class="text-gray-600 space-y-1">
-                    <p class="text-sm">Nama Admin: <span class="font-bold text-cyan-500">{{ session('username', 'Daffa Rizqullah') }}</span></p>
-                    <p class="text-sm">Email: <span class="text-gray-400">{{ session('email', 'admin@smartin.com') }}</span></p>
+                    <p class="text-sm">Nama Admin: <span class="font-bold text-cyan-500">{{ auth()->user()->full_name }}</span></p>
+                    <p class="text-sm">Email: <span class="text-gray-400">{{ auth()->user()->email }}</span></p>
                 </div>
             </div>
         </div>
@@ -39,7 +39,7 @@
                     <x-akar-person class="w-8 h-8" />
                 </div>
                 <div>
-                    <h3 class="text-2xl font-black text-cyan-500">250</h3>
+                    <h3 class="text-2xl font-black text-cyan-500">{{ $jumlahSiswa }}</h3>
                     <p class="text-gray-400 text-sm font-semibold uppercase tracking-wider">Siswa</p>
                 </div>
             </div>
@@ -49,7 +49,7 @@
                     <x-akar-book class="w-8 h-8" />
                 </div>
                 <div>
-                    <h3 class="text-2xl font-black text-cyan-500">50</h3>
+                    <h3 class="text-2xl font-black text-cyan-500">{{ $jumlahMapel }}</h3>
                     <p class="text-gray-400 text-sm font-semibold uppercase tracking-wider">Mata Pelajaran</p>
                 </div>
             </div>
@@ -59,7 +59,7 @@
                     <x-akar-edit class="w-8 h-8" />
                 </div>
                 <div>
-                    <h3 class="text-2xl font-black text-cyan-500">40</h3>
+                    <h3 class="text-2xl font-black text-cyan-500">{{ $jumlahMentor }}</h3>
                     <p class="text-gray-400 text-sm font-semibold uppercase tracking-wider">Mentor Pengajar</p>
                 </div>
             </div>
@@ -69,7 +69,7 @@
                     <x-eos-packages-o class="w-8 h-8" />
                 </div>
                 <div>
-                    <h3 class="text-2xl font-black text-cyan-500">25</h3>
+                    <h3 class="text-2xl font-black text-cyan-500">{{ $jumlahPaket }}</h3>
                     <p class="text-gray-400 text-sm font-semibold uppercase tracking-wider">Paket Bundling</p>
                 </div>
             </div>

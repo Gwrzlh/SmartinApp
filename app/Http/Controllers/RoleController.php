@@ -13,10 +13,18 @@ class RoleController extends Controller
      */
     public function dashboard()
     {
+
+        $data = [
+            'jumlahSiswa' => \App\Models\students::count(),
+            'jumlahMapel' => \App\Models\subjects::count(),
+            'jumlahMentor' => \App\Models\mentors::count(),
+            'jumlahPaket'  => \App\Models\bundlings::count(),
+            ];
+
         $user = Auth::user();
 
         return match($user->role) {
-            'admin' => view('Admin.dashboard', ['user' => $user]),
+            'admin' => view('Admin.dashboard', ['user' => $user], $data),
             'owner' => view('Owner.dashboard', ['user' => $user]),
             'kasir' => view('Kasir.dashboard', ['user' => $user]),
             default => abort(403)

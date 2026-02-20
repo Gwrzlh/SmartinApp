@@ -18,7 +18,7 @@
 
         <nav class="flex-1 ml-2 space-y-2">
             
-            <a href="#" class="flex items-center p-3 text-gray-600 hover:bg-cyan-50 hover:text-cyan-600 rounded-xl transition-colors group/item">
+            <a href="{{ route('admin.dashboard') }}" class="flex items-center p-3 text-gray-600 hover:bg-cyan-50 hover:text-cyan-600 rounded-xl transition-colors group/item">
                 <div class="flex-shrink-0">
                     <x-akar-home class="w-7 h-7" />
                 </div>
@@ -27,7 +27,7 @@
                 </span>
             </a>
 
-            <a href="#" class="flex items-center p-3 text-gray-600 hover:bg-cyan-50 hover:text-cyan-600 rounded-xl transition-colors group/item">
+            <a href="{{ route('admin.users.index') }}" class="flex items-center p-3 text-gray-600 hover:bg-cyan-50 hover:text-cyan-600 rounded-xl transition-colors group/item">
                 <div class="flex-shrink-0">
                     <x-ri-user-settings-line class="w-7 h-7" />
                 </div>
@@ -86,10 +86,10 @@
         <div class="p-4 border-t border-gray-100 bg-gray-300 rounded-t-xl">
             <div class="flex items-center overflow-hidden">
                 <div class="flex-shrink-0 w-10 h-10 bg-cyan-500 rounded-full flex items-center justify-center text-white font-bold">
-                    {{ substr(session('username', 'U'), 0, 1) }}
+                    {{ substr(auth()->user()->full_name, 0, 1) }}
                 </div>
                 <div class="ml-3 opacity-0 group-hover:opacity-100 transition-opacity duration-500 min-w-[120px]">
-                    <p class="text-sm font-semibold text-gray-700 truncate">{{ session('username','Admin') }}</p>
+                    <p class="text-sm font-semibold text-gray-700 truncate">{{ auth()->user()->full_name }}</p>
                     <form method="POST" action="{{ route('logout') }}">
                         @csrf
                         <button type="submit" class="text-xs text-red-500 hover:underline">Logout</button>
