@@ -36,7 +36,7 @@
                 </span>
             </a>
 
-            <a href="#" class="flex items-center p-3 text-gray-600 hover:bg-cyan-50 hover:text-cyan-600 rounded-xl transition-colors group/item">
+            <a href="{{ route('admin.category.index') }}" class="flex items-center p-3 text-gray-600 hover:bg-cyan-50 hover:text-cyan-600 rounded-xl transition-colors group/item">
                 <div class="flex-shrink-0">
                     <x-akar-folder class="w-7 h-7" />
                 </div>
@@ -45,7 +45,7 @@
                 </span>
             </a>
 
-            <a href="#" class="flex items-center p-3 text-gray-600 hover:bg-cyan-50 hover:text-cyan-600 rounded-xl transition-colors group/item">
+            <a href="{{ route('admin.subjects.index') }}" class="flex items-center p-3 text-gray-600 hover:bg-cyan-50 hover:text-cyan-600 rounded-xl transition-colors group/item">
                 <div class="flex-shrink-0">
                     <x-bx-book class="w-7 h-7" />
                 </div>
@@ -54,7 +54,7 @@
                 </span>
             </a>
 
-            <a href="#" class="flex items-center p-3 text-gray-600 hover:bg-cyan-50 hover:text-cyan-600 rounded-xl transition-colors group/item">
+            <a href="{{ route('admin.mentor.index') }}" class="flex items-center p-3 text-gray-600 hover:bg-cyan-50 hover:text-cyan-600 rounded-xl transition-colors group/item">
                 <div class="flex-shrink-0">
                     <x-akar-people-group class="w-7 h-7" />
                 </div>

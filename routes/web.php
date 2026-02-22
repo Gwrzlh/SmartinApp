@@ -5,6 +5,8 @@ use App\Http\Controllers\authController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\SubjectsController;
+use App\Http\Controllers\mentorController;
 
 // =========================================
 // PUBLIC ROUTES (Tidak perlu login)
@@ -39,8 +41,11 @@ Route::middleware('auth')->group(function () {
         //     Route::get('/{user}/edit', [UserController::class, 'edit'])->name('edit');
         // });
 
-        Route::resource('users', UserController::class)->except(['show']);
-
+        Route::resource('users', UserController::class);
+        Route::get('users/search', [UserController::class, 'search'])->name('users.search');
+        Route::resource('category', CategoryController::class);
+        Route::resource('subjects', SubjectsController::class);
+        Route::resource('mentor', mentorController::class);
     });
 
     Route::middleware('role:owner')->group(function () {

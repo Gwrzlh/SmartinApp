@@ -22,15 +22,29 @@
     <div class="max-w-7xl mx-auto">
         <div class="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
             <div>
-                <h1 class="text-2xl font-semibold text-gray-800 inline-block border-b-4 border-cyan-600 pb-2">Kelola Users</h1>
+                <h1 class="text-2xl font-semibold text-gray-800 inline-block border-b-4 border-cyan-600 pb-2">Kelola Mapel</h1>
             </div>
             
-            <div class="flex flex-col sm:flex-row gap-3">
-                <form action="{{ route('admin.users.index') }}" method="GET" class="flex flex-col sm:flex-row gap-3">
+           <div class="flex flex-col sm:flex-row gap-3">
+                <form action="{{ route('admin.subjects.index') }}" method="GET" class="flex flex-col sm:flex-row gap-3">
+                    <div class="relative">
+                        <select name="filterbycategory" onchange="this.form.submit()" 
+                            class="pl-3 pr-10 py-2 w-full sm:w-48 rounded-xl border-2 border-gray-100 bg-white focus:border-cyan-500 focus:ring-4 focus:ring-cyan-500/10 outline-none transition-all text-sm appearance-none cursor-pointer">
+                            <option value="">Semua Kategori</option>
+                            @foreach($categories as $cat)
+                                <option value="{{ $cat->id }}" {{ request('filterbycategory') == $cat->id ? 'selected' : '' }}>
+                                    {{ $cat->category_name }}
+                                </option>
+                            @endforeach
+                        </select>
+                        <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                            <x-akar-chevron-down class="w-4 h-4 text-gray-400" />
+                        </div>
+                    </div>
 
                     <div class="relative group">
                         <input type="text" name="search" value="{{ request('search') }}"
-                            placeholder="Cari nama User..." 
+                            placeholder="Cari nama Mapel..." 
                             class="pl-10 pr-4 py-2 w-full sm:w-64 rounded-xl border-2 border-gray-100 bg-white focus:border-cyan-500 focus:ring-4 focus:ring-cyan-500/10 outline-none transition-all text-sm">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <x-akar-search class="w-4 h-4 text-gray-400 group-focus-within:text-cyan-500" />
@@ -39,14 +53,14 @@
                     </div>
                     
                     @if(request('search') || request('filterbycategory'))
-                        <a href="{{ route('admin.users.index') }}" class="inline-flex items-center px-3 py-2 text-sm text-red-500 hover:text-red-700 transition-colors">
+                        <a href="{{ route('admin.subjects.index') }}" class="inline-flex items-center px-3 py-2 text-sm text-red-500 hover:text-red-700 transition-colors">
                             <x-akar-circle-x class="w-4 h-4 mr-1" /> Reset
                         </a>
                     @endif
                 </form>
 
-                <a href="{{ route('admin.users.create') }}" class="inline-flex items-center justify-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-xl shadow-lg shadow-blue-200 transition-all active:scale-95">
-                    <x-akar-person-add class="w-5 h-5 mr-2" />Tambah User
+                <a href="{{ route('admin.subjects.create') }}" class="inline-flex items-center justify-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-xl shadow-lg shadow-blue-200 transition-all active:scale-95">
+                    <x-akar-person-add class="w-5 h-5 mr-2" />Tambah Mapel
                 </a>
             </div>
         </div>
@@ -56,37 +70,31 @@
                 <thead class="bg-gray-50">
                     <tr>
                         <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">No.</th>
-                        <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Username</th>
-                        <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                        <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-                        <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Nama Mapel</th>
+                        <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Kategori</th>
+                        <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Harga Bulanan</th>
+                        <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Deskripsi</th>
                         <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
-                    @forelse ($users as $user)
+                    @forelse ($subjects as $subject)
                         <tr class="hover:bg-gray-50">
                             <td class="px-6 py-4 text-center text-sm text-gray-900">
-                                {{ ($users->currentPage() - 1) * $users->perPage() + $loop->iteration }}
+                                {{ ($subjects->currentPage() - 1) * $subjects->perPage() + $loop->iteration }}
                             </td>
-                            <td class="px-6 py-4 text-center text-sm text-gray-900">{{ $user->username }}</td>
-                            <td class="px-6 py-4 text-center text-sm text-gray-900">{{ $user->email }}</td>
-                            <td class="px-6 py-4 text-center text-sm text-gray-900">{{ $user->role }}</td>
-                            <td class="px-6 py-4 text-center text-sm">
-                                @if($user->is_active)
-                                    <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Aktif</span>
-                                @else
-                                    <span class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Nonaktif</span>
-                                @endif
-                            </td>
+                            <td class="px-6 py-4 text-center text-sm text-gray-900">{{ $subject->mapel_name }}</td>
+                            <td class="px-6 py-4 text-center text-sm text-gray-900">{{ $subject->categories->category_name ?? 'Tidak ada kategori' }}</td>
+                            <td class="px-6 py-4 text-center text-sm text-gray-900">Rp {{ number_format($subject->monthly_price, 0, ',', '.') }}</td>
+                            <td class="px-6 py-4 text-center text-sm text-gray-900">{{ Str::limit($subject->description, 50) }}</td>
                             <td class="px-6 py-4 text-center text-sm font-medium space-x-2">
-                                <button onclick="ShowUsers({{ $user->id }})" class="p-2 text-cyan-500 hover:bg-cyan-50 rounded-lg">
+                                <button onclick="ShowSubjects({{ $subject->id }})" class="p-2 text-cyan-500 hover:bg-cyan-50 rounded-lg">
                                     <x-akar-eye-open class="w-5 h-5 inline" />
                                 </button>
-                                <a href="{{ route('admin.users.edit', $user->id) }}" class="text-indigo-600 hover:text-indigo-900">
+                                <a href="{{ route('admin.subjects.edit', $subject->id) }}" class="text-indigo-600 hover:text-indigo-900">
                                     <x-akar-edit class="w-4 h-4 inline" /> Edit
                                 </a>
-                                <form action="{{ route('admin.users.destroy', $user->id) }}" method="POST" class="inline deleteForm">
+                                <form action="{{ route('admin.subjects.destroy', $subject->id) }}" method="POST" class="inline deleteForm">
                                     @csrf
                                     @method('DELETE')
                                     <button type="button" onclick="confirmDelete(this)" class="text-red-600 hover:text-red-900">
@@ -107,52 +115,45 @@
         </div>
             <div class="px-6 py-4 bg-gray-50/50 border-t border-gray-100 flex items-center justify-between">
                     <p class="text-xs text-gray-500 font-medium">
-                        Menampilkan {{ $users->firstItem() }} sampai {{ $users->lastItem() }} dari {{ $users->total() }} user
+                        Menampilkan {{ $subjects->firstItem() }} sampai {{ $subjects->lastItem() }} dari {{ $subjects->total() }} Mapel
                     </p>
                     <div class="pagination-custom">
-                        {{ $users->links() }}
+                        {{ $subjects->links() }}
                     </div>
             </div>
     </div>
 </div>
 
-<!-- modal overlay -->
-@include('Admin.Users.partials.detail')
+@include('Admin.Subjects.partials.model')
+
 
 <script>
-    function ShowUsers(id) {
-        const modal = document.getElementById('userModal');
+     function ShowSubjects(id) {
+        const modal = document.getElementById('subjectsModal');
         const modalContent = document.getElementById('modalContent');
-        const url = "{{ route('admin.users.index') }}/" + id;
+        const url = "{{ route('admin.subjects.index') }}/" + id;
 
         // Reset & Show loading
         modal.classList.remove('invisible');
-        document.getElementById('modalUsername').textContent = 'Loading...';
-        document.getElementById('modalUserRole').textContent = '';
+        document.getElementById('modalSubjects').textContent = 'Loading...';
+        document.getElementById('modalSubjectCategory').textContent = '';
         document.getElementById('modalGridBody').innerHTML = '<div class="col-span-2 flex justify-center items-center py-8"><div class="loading-spinner"></div></div>';
         
         fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
             .then(response => response.json())
             .then(data => {
-                // Update Header
-                document.getElementById('modalUsername').textContent = data.username;
-                document.getElementById('modalUserRole').textContent = 'Role: ' + data.role;
+             
+                document.getElementById('modalSubjects').textContent = data.subject_name;
+                document.getElementById('modalSubjectCategory').textContent = data.category_name;
 
-                // Update Grid Body (Format lebih profesional)
                 document.getElementById('modalGridBody').innerHTML = `
                     <div class="space-y-1">
-                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Email Address</p>
-                        <p class="text-sm font-semibold text-gray-700">${data.email}</p>
+                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Description</p>
+                        <p class="text-sm font-semibold text-gray-700">${data.description}</p>
                     </div>
                     <div class="space-y-1">
-                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Nama Lengkap</p>
-                        <p class="text-sm font-semibold text-gray-700">${data.full_name}</p>
-                    </div>
-                    <div class="space-y-1">
-                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Account Status</p>
-                        <span class="text-xs font-bold ${data.is_active ? 'text-emerald-600' : 'text-red-500'}">
-                            ${data.is_active ? 'ACTIVE' : 'INACTIVE'}
-                        </span>
+                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Monthly Price</p>
+                        <p class="text-sm font-semibold text-gray-700">Rp ${data.monthly_price.toLocaleString('id-ID')}</p>
                     </div>
                     <div class="space-y-1">
                         <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Member Since</p>
@@ -171,18 +172,17 @@
             .catch(err => {
                 Swal.fire({
                     title: 'Error!',
-                    text: 'Gagal memuat data user. Silakan coba lagi.',
+                    text: 'Gagal memuat data Mapel. Silakan coba lagi.',
                     icon: 'error',
                     confirmButtonColor: '#06b6d4',
                     confirmButtonText: 'OK'
                 });
             });
     }
-
     function confirmDelete(button) {
         Swal.fire({
             title: 'Konfirmasi Hapus',
-            text: 'Apakah Anda yakin ingin menghapus user ini? Data yang dihapus tidak dapat dikembalikan.',
+            text: 'Apakah Anda yakin ingin menghapus Mapel ini? Data yang dihapus tidak dapat dikembalikan.',
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#ef4444',
@@ -216,7 +216,7 @@
                 .then(() => {
                     Swal.fire({
                         title: 'Berhasil!',
-                        text: 'User berhasil dihapus.',
+                        text: 'Mapel berhasil dihapus.',
                         icon: 'success',
                         confirmButtonColor: '#06b6d4',
                         confirmButtonText: 'OK'
@@ -227,7 +227,7 @@
                 .catch(() => {
                     Swal.fire({
                         title: 'Error!',
-                        text: 'Gagal menghapus user.',
+                        text: 'Gagal menghapus Mapel.',
                         icon: 'error',
                         confirmButtonColor: '#06b6d4',
                         confirmButtonText: 'OK'
@@ -236,9 +236,8 @@
             }
         });
     }
-
     function closeModal() {
-        const modal = document.getElementById('userModal');
+        const modal = document.getElementById('subjectsModal');
         const modalContent = document.getElementById('modalContent');
         
         // Animasi Keluar
