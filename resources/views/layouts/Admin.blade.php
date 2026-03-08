@@ -63,7 +63,7 @@
                 </span>
             </a>
 
-            <a href="#" class="flex items-center p-3 text-gray-600 hover:bg-cyan-50 hover:text-cyan-600 rounded-xl transition-colors group/item">
+            <a href="{{ route('admin.bundling.index') }}" class="flex items-center p-3 text-gray-600 hover:bg-cyan-50 hover:text-cyan-600 rounded-xl transition-colors group/item">
                 <div class="flex-shrink-0">
                     <x-eos-packages-o class="w-7 h-7" />
                 </div>
@@ -72,7 +72,7 @@
                 </span>
             </a>
 
-            <a href="#" class="flex items-center p-3 text-gray-600 hover:bg-cyan-50 hover:text-cyan-600 rounded-xl transition-colors group/item">
+            <a href="{{ route('admin.schedules.index') }}" class="flex items-center p-3 text-gray-600 hover:bg-cyan-50 hover:text-cyan-600 rounded-xl transition-colors group/item">
                 <div class="flex-shrink-0">
                     <x-akar-calendar class="w-7 h-7" />
                 </div>

@@ -1,5 +1,5 @@
 <!-- modal overlay -->
-<div id="mentorModal" class="fixed inset-0 z-50 invisible overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+<div id="schedulesModal" class="fixed inset-0 z-50 invisible overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
     <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
         <div class="fixed inset-0 transition-opacity bg-gray-900/40 backdrop-blur-sm" onclick="closeModal()"></div>
 
@@ -16,8 +16,8 @@
                     <x-ri-user-line class="w-8 h-8" />
                 </div>
                 <div class="ml-4">
-                    <h3 class="text-xl font-bold text-gray-900" id="modalMentorName">Loading...</h3>
-                    <p class="text-sm text-gray-500" id="modalMapelName"></p>
+                    <h3 class="text-xl font-bold text-gray-900" id="modalUsername">Loading...</h3>
+                    <p class="text-sm text-gray-500" id="modalUserRole"></p>
                 </div>
             </div>
 

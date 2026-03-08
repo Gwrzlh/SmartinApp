@@ -3,10 +3,14 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\authController;
 use App\Http\Controllers\RoleController;
+use App\Http\Controllers\Kasir\DashboardController as KasirDashboardController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\SubjectsController;
 use App\Http\Controllers\mentorController;
+use App\Http\Controllers\bundlingController;
+use App\Http\Controllers\scheduleController;
+use App\Http\Controllers\transactionController;
 
 // =========================================
 // PUBLIC ROUTES (Tidak perlu login)
@@ -46,6 +50,9 @@ Route::middleware('auth')->group(function () {
         Route::resource('category', CategoryController::class);
         Route::resource('subjects', SubjectsController::class);
         Route::resource('mentor', mentorController::class);
+        Route::resource('bundling', bundlingController::class);
+        Route::resource('schedules', scheduleController::class);
+        Route::get('get-subjects/{mentorId}', [scheduleController::class, 'getSubjectsByMentor'])->name('getSubjects');
     });
 
     Route::middleware('role:owner')->group(function () {
@@ -55,9 +62,14 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::middleware('role:kasir')->group(function () {
-        Route::get('kasir', [RoleController::class, 'dashboard'])
+        Route::get('kasir', [KasirDashboardController::class, 'index'])
             ->name('kasir.dashboard');
-    });
+        Route::get('transaction', [transactionController::class, 'index'])->name('kasir.transaction'); 
+        Route::post('storeSiswa', [transactionController::class, 'storeSiswa'])->name('simpanSiswa');
+        Route::patch('siswa/{student}', [transactionController::class, 'updateSiswa'])->name('updateSiswa');
+        Route::post('siswa/delete{student}', [transactionController::class, 'destroySiswa'])->name('hapusSiswa');
+        
+        });
 });
 
 

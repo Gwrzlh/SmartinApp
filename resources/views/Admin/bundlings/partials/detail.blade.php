@@ -1,5 +1,5 @@
 <!-- modal overlay -->
-<div id="mentorModal" class="fixed inset-0 z-50 invisible overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+<div id="bundlingModal" class="fixed inset-0 z-50 invisible overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
     <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
         <div class="fixed inset-0 transition-opacity bg-gray-900/40 backdrop-blur-sm" onclick="closeModal()"></div>
 
@@ -7,17 +7,17 @@
             
             <div class="absolute top-0 right-0 pt-6 pr-6">
                 <button onclick="closeModal()" class="text-gray-400 hover:text-gray-500 focus:outline-none bg-gray-50 rounded-full p-2">
-                    <x-akar-cross class="w-5 h-5" />
+                    <x-eos-packages-o class="w-5 h-5" />
                 </button>
             </div>
 
             <div class="flex items-center mb-8">
                 <div class="h-16 w-16 rounded-2xl bg-cyan-600 flex items-center justify-center text-white shadow-lg shadow-cyan-200">
-                    <x-ri-user-line class="w-8 h-8" />
+                    <x-eos-packages-o class="w-8 h-8" />
                 </div>
                 <div class="ml-4">
-                    <h3 class="text-xl font-bold text-gray-900" id="modalMentorName">Loading...</h3>
-                    <p class="text-sm text-gray-500" id="modalMapelName"></p>
+                    <h3 class="text-xl font-bold text-gray-900" id="modalBundlingName">Loading...</h3>
+                    <p class="text-sm text-gray-500" id="modalBundlingPrice"></p>
                 </div>
             </div>
 

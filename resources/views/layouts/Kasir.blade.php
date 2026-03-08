@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    @vite('resources/css/app.css')
+    {{-- @vite('resources/css/app.css') --}}
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
     <title>SmartIn Navbar</title>
 </head>
 <body class="bg-gray-50">
@@ -21,13 +22,13 @@
                                 [
                                     'icon' => 'akar-home', 
                                     'label' => 'Dashboard', 
-                                    'href' => '#', 
+                                    'href' => 'kasir', 
                                     'color' => 'hover:bg-blue-50 text-blue-600' // Biru
                                 ],
                                 [
                                     'icon' => 'akar-clipboard', 
                                     'label' => 'Transaksi', 
-                                    'href' => '#', 
+                                    'href' => 'transaction', 
                                     'color' => 'hover:bg-emerald-50 text-emerald-600' // Hijau
                                 ],
                                 [

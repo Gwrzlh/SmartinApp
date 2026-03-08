@@ -32,7 +32,7 @@
             <div class="bg-gradient-to-r from-cyan-600 to-cyan-500 px-8 py-10 text-white">
                 <div class="flex items-center space-x-4">
                     <div class="p-3 bg-white/20 rounded-2xl backdrop-blur-md">
-                        <x-akar-person-add class="w-8 h-8 text-white" />
+                        <x-bx-book-add  class="w-8 h-8 text-white" />
                     </div>
                     <div>
                         <h3 class="text-2xl font-bold tracking-tight">Tambah Mapel Baru</h3>

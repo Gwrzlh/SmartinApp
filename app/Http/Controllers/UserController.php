@@ -62,7 +62,9 @@ class UserController extends Controller
             'username' => 'required|unique:users,username,' . $user->id,
             // 'is_active' => 'required|boolean',
         ]);
-  $isActive = $request->has('active') ? 1 : 0;
+ 
+        $isActive = $request->has('active') ? 1 : 0;
+        
         $user->update([
             'full_name' => $request->full_name,
             'email' => $request->email,

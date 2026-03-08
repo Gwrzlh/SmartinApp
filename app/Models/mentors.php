@@ -12,6 +12,7 @@ class mentors extends Model
 
     public function subjects()
     {
-        return $this->belongsTo(subjects::class, 'specialization_id', 'id');
+        return $this->belongsToMany(subjects::class, 'mentor_subjects', 'mentor_id', 'subject_id');
     }
+    
 }

@@ -114,12 +114,12 @@
         
         // Disable button and show loading
         submitBtn.disabled = true;
-        submitText.innerHTML = '<div class="loading-spinner"></div> Menyimpan...';
+        submitText.innerHTML = '<div class="loading-spinner"></div> Memperbarui...';
         
         // Show loading alert
         Swal.fire({
-            title: 'Menyimpan Data...',
-            text: 'Mohon tunggu, data category sedang disimpan ke sistem.',
+            title: 'Memperbarui Data...',
+            text: 'Mohon tunggu, data category sedang diperbarui ke sistem.',
             icon: 'info',
             allowOutsideClick: false,
             allowEscapeKey: false,

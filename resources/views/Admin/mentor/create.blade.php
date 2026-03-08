@@ -79,29 +79,47 @@
                                 <option value="Perempuan">Perempuan</option>
                             </select>
                         </div>
-                        <div class="space-y-2">
-                                <label for="spesialization_id" class="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Spesialisasi Mapel</label>
-                                <select name="spesialization_id" id="spesialization_id" 
-                                    class="block w-full px-4 py-3 rounded-xl border-2 border-gray-100 bg-gray-50/50 text-gray-700 transition-all 
-                                    focus:bg-white focus:border-cyan-500 focus:ring-4 focus:ring-cyan-500/10 outline-none placeholder:text-gray-300" required>
-                                    <option value="" disabled selected>Pilih Spesialisasi</option>
-                                    @foreach($subjects as $subject)
-                                        <option value="{{ $subject->id }}">{{ $subject->mapel_name }}</option>
-                                    @endforeach
-                                </select>
-                        </div>
- 
-                        <div class="flex items-center pb-3 px-4 h-[52px] bg-gray-50/50 border-2 border-gray-100 rounded-xl group hover:bg-cyan-50/50 hover:border-cyan-100 transition-all">
-                            <input type="checkbox" name="active" id="isActive" class="h-5 w-5 text-cyan-600 border-gray-300 rounded-lg focus:ring-cyan-500 cursor-pointer">
+                       
+                       <div class="flex items-center pb-3 px-4 h-[52px] bg-gray-50/50 border-2 border-gray-100 rounded-xl group hover:bg-cyan-50/50 hover:border-cyan-100 transition-all">
+                            <input type="checkbox" name="isActive" id="isActive" class="h-5 w-5 text-cyan-600 border-gray-300 rounded-lg focus:ring-cyan-500 cursor-pointer">
                             <label for="isActive" class="ml-3 text-sm font-semibold text-gray-600 cursor-pointer group-hover:text-cyan-700">Status Mentor</label>
                         </div>
                     </div>
+                    <div class="space-y-3 pt-4 border-t border-gray-50">
+                            <label class="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1 text-cyan-600">
+                                Keahlian / Spesialisasi Mapel
+                            </label>
+                            
+                            <div class="relative">
+                                <select id="subjectSelector" class="block w-full px-4 py-3 rounded-xl border-2 border-gray-100 bg-gray-50 text-gray-700 transition-all focus:bg-white focus:border-cyan-500 outline-none appearance-none cursor-pointer">
+                                    <option value="" disabled selected>-- Klik untuk memilih keahlian mentor --</option>
+                                    @foreach($subjects as $subject)
+                                        <option value="{{ $subject->id }}" data-name="{{ $subject->mapel_name }}">
+                                            {{ $subject->mapel_name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                <div class="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none text-gray-400">
+                                    <x-akar-chevron-down class="w-5 h-5" />
+                                </div>
+                            </div>
 
+                            <div id="tagsContainer" class="flex flex-wrap gap-2 p-4 min-h-[100px] rounded-2xl border-2 border-dashed border-gray-100 bg-gray-50/30 transition-all">
+                                <div id="placeholderText" class="w-full flex flex-col items-center justify-center text-gray-300 py-4">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    <p class="text-xs font-medium">Belum ada spesialisasi yang dipilih</p>
+                                </div>
+                            </div>
+
+                            <div id="hiddenInputsContainer"></div>
+                        </div>
                     <div class="flex items-center justify-end space-x-4 pt-10 mt-6 border-t border-gray-50">
                         <button type="submit" id="submitBtn"
-                            class="px-10 py-3 bg-cyan-600 hover:bg-cyan-700 text-white font-bold rounded-xl transition-all shadow-lg shadow-cyan-200 hover:shadow-cyan-300 hover:-translate-y-0.5 active:scale-95 flex items-center justify-center">
+                            class="px-10 py-3 bg-cyan-600 hover:bg-cyan-700 text-white font-bold rounded-xl transition-all shadow-lg shadow-cyan-200 hover:shadow-cyan-300 hover:-translate-y-0.5 isActive:scale-95 flex items-center justify-center">
                             <span id="submitText">Simpan Data mentor</span>
-                        </button>
+                        </button>   
                     </div>
                 </form>
             </div>
@@ -110,7 +128,71 @@
 </div>
 
 <script>
-    // Display validation errors as SweetAlert if any
+
+    const selector = document.getElementById('subjectSelector');
+    const container = document.getElementById('tagsContainer');
+    const hiddenContainer = document.getElementById('hiddenInputsContainer');
+    const placeholder = document.getElementById('placeholderText');
+    let selectedSubjects = [];
+
+    selector.addEventListener('change', function() {
+        const id = this.value;
+        const name = this.options[this.selectedIndex].getAttribute('data-name');
+
+        // Cek jika sudah ada
+        if (selectedSubjects.includes(id)) {
+            Swal.fire({ 
+                icon: 'info', 
+                title: 'Sudah Ada', 
+                text: 'Mata pelajaran ini sudah ditambahkan ke keahlian mentor.', 
+                confirmButtonColor: '#06b6d4' 
+            });
+            this.value = "";
+            return;
+        }
+
+        selectedSubjects.push(id);
+        placeholder.style.display = 'none';
+
+        // 1. Buat Tampilan Tag (Chip)
+        const tag = document.createElement('div');
+        tag.className = "group flex items-center bg-white border-2 border-cyan-100 text-cyan-700 pl-4 pr-2 py-2 rounded-xl shadow-sm hover:border-cyan-300 transition-all animate-in fade-in zoom-in duration-300";
+        tag.setAttribute('data-id', id);
+        tag.innerHTML = `
+            <span class="text-sm font-bold mr-2">${name}</span>
+            <button type="button" onclick="removeTag('${id}')" class="p-1 rounded-lg hover:bg-red-50 hover:text-red-500 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        `;
+        container.appendChild(tag);
+
+        // 2. Buat Hidden Input untuk dikirim ke Controller
+        const hiddenInput = document.createElement('input');
+        hiddenInput.type = 'hidden';
+        hiddenInput.name = 'spesialization_id[]'; // SESUAI DENGAN CONTROLLER MENTOR
+        hiddenInput.value = id;
+        hiddenInput.id = `input-${id}`;
+        hiddenContainer.appendChild(hiddenInput);
+
+        this.value = ""; // Reset dropdown agar bisa pilih lagi
+    });
+
+    window.removeTag = function(id) {
+        selectedSubjects = selectedSubjects.filter(item => item !== id);
+        const tagElement = document.querySelector(`[data-id="${id}"]`);
+        const inputElement = document.getElementById(`input-${id}`);
+        
+        if (tagElement) tagElement.remove();
+        if (inputElement) inputElement.remove();
+
+        if (selectedSubjects.length === 0) {
+            placeholder.style.display = 'flex';
+        }
+    };
+    
+    
     @if ($errors->any())
         const errors = [
             @foreach ($errors->all() as $error)

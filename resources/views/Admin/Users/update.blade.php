@@ -172,7 +172,7 @@
         
         // Disable button and show loading
         submitBtn.disabled = true;
-        submitText.innerHTML = '<div class="loading-spinner"></div> Menyimpan...';
+        submitText.innerHTML = '<div class="loading-spinner"></div> Memperbarui...';
         
         // Show loading alert
         Swal.fire({

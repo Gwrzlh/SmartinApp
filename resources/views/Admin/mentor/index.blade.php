@@ -72,7 +72,7 @@
                         <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">No.</th>
                         <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Nama Mentor</th>
                         <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">No Telepon</th>
-                        <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Spesialisasi</th>
+                        {{-- <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Spesialisasi</th> --}}
                         <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                         <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
                     </tr>
@@ -85,8 +85,14 @@
                             </td>
                             <td class="px-6 py-4 text-center text-sm text-gray-900">{{ $mentor->mentor_name }}</td>
                             <td class="px-6 py-4 text-center text-sm text-gray-900">{{ $mentor->phone_number }}</td>
-                            <td class="px-6 py-4 text-center text-sm text-gray-900">{{ $mentor->subjects->subject_name ?? 'Tidak ada spesialisasi' }}</td>
-                            <td class="px-6 py-4 text-center text-sm text-gray-900">{{ $mentor->is_active ? 'Aktif' : 'Tidak Aktif' }}</td>
+                            {{-- <td class="px-6 py-4 text-center text-sm text-gray-900">{{ $mentor->subjects->mapel_name ?? 'Tidak ada spesialisasi' }}</td> --}}
+                             <td class="px-6 py-4 text-center text-sm">
+                                @if($mentor->is_active)
+                                    <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Aktif</span>
+                                @else
+                                    <span class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Nonaktif</span>
+                                @endif
+                            </td>
                             <td class="px-6 py-4 text-center text-sm font-medium space-x-2">
                                 <button onclick="ShowMentorDetails({{ $mentor->id }})" class="p-2 text-cyan-500 hover:bg-cyan-50 rounded-lg">
                                     <x-akar-eye-open class="w-5 h-5 inline" />
@@ -129,14 +135,17 @@
 
 <script>
     function ShowMentorDetails(id) {
-        const modal = document.getElementById('userModal');
+        const modal = document.getElementById('mentorModal');
         const modalContent = document.getElementById('modalContent');
         const url = "{{ route('admin.mentor.index') }}/" + id;
+        const mapelList = (Array.isArray(data.specialization) && data.specialization.length > 0) 
+                    ? data.specialization.join(', ') 
+                    : '-';
 
-        // Reset & Show loading
+
         modal.classList.remove('invisible');
-        document.getElementById('modalUsername').textContent = 'Loading...';
-        document.getElementById('modalUserRole').textContent = '';
+        document.getElementById('modalMentorName').textContent = 'Loading...';
+        document.getElementById('modalMapelName').textContent = '';
 
         document.getElementById('modalGridBody').innerHTML = '<div class="col-span-2 flex justify-center items-center py-8"><div class="loading-spinner"></div></div>';
         
@@ -144,17 +153,24 @@
             .then(response => response.json())
             .then(data => {
              
-                document.getElementById('modalUsername').textContent = data.mentor_name;
-                document.getElementById('modalUserRole').textContent = data.is_active ? 'Aktif' : 'Tidak Aktif';
-
+                document.getElementById('modalMentorName').textContent = data.mentor_name;
+                document.getElementById('modalMapelName').textContent = data.specialization;
                 document.getElementById('modalGridBody').innerHTML = `
                     <div class="space-y-1">
-                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Description</p>
-                        <p class="text-sm font-semibold text-gray-700">${data.description}</p>
+                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Nomor Telepon</p>
+                        <p class="text-sm font-semibold text-gray-700">${data.phone_number}</p>
                     </div>
                     <div class="space-y-1">
-                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Monthly Price</p>
-                        <p class="text-sm font-semibold text-gray-700">Rp ${data.monthly_price.toLocaleString('id-ID')}</p>
+                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Gender</p>
+                        <p class="text-sm font-semibold text-gray-700">${data.gender}</p>
+                    </div>
+                    <div class="space-y-1">
+                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">status</p>
+                        <p class="text-sm font-semibold text-gray-700">${data.is_active ? 'Aktif' : 'Tidak Aktif'}</p>
+                    </div>
+                    <div class="space-y-1">
+                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Mapel</p>
+                        <p class="text-sm font-semibold text-gray-700">${mapelList}</p>
                     </div>
                     <div class="space-y-1">
                         <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Member Since</p>
@@ -238,7 +254,7 @@
         });
     }
     function closeModal() {
-        const modal = document.getElementById('subjectsModal');
+        const modal = document.getElementById('mentorModal');
         const modalContent = document.getElementById('modalContent');
         
         // Animasi Keluar
