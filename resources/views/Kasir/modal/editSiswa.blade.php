@@ -47,7 +47,7 @@
 
             <div class="flex justify-end gap-2 pt-4">
                 <button type="button"
-                onclick="closeStudentModal()"
+                onclick="closeEditModal()"
                 class="px-4 py-2 bg-gray-200 rounded-lg">
                 Batal
                 </button>

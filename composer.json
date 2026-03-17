@@ -12,6 +12,7 @@
         "php": "^8.2",
         "afatmustafa/blade-hugeicons": "*",
         "andreiio/blade-remix-icon": "^3.9",
+        "barryvdh/laravel-dompdf": "^3.1",
         "blade-ui-kit/blade-icons": "^1.8",
         "codeat3/blade-akar-icons": "^1.25",
         "codeat3/blade-eos-icons": "^1.15",

@@ -12,7 +12,7 @@
         </div>
 
         <!-- Form -->
-        <form action="{{ route('simpanSiswa') }}" method="POST" class="space-y-4">
+        <form id="createStudentForm" action="{{ route('simpanSiswa') }}" method="POST" class="space-y-4">
             @csrf
 
             <div>
@@ -56,9 +56,7 @@
                 Simpan
                 </button>
             </div>
-
         </form>
 
     </div>
-
 </div>

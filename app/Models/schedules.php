@@ -11,7 +11,7 @@ class schedules extends Model
 
     public function enrollments()
     {
-        return $this->belongsToMany(enrollments::class, 'enrollment_schedules', 'enrollment_id', 'schedule_id');
+        return $this->belongsToMany(enrollments::class, 'enrollment_schedules', 'schedule_id', 'enrollment_id');
     }
     public function subject()
     {

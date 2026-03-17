@@ -34,9 +34,22 @@
                                 [
                                     'icon' => 'akar-history', 
                                     'label' => 'Riwayat', 
-                                    'href' => '#', 
+                                    'href' => route('kasir.riwayat.index'), 
                                     'color' => 'hover:bg-amber-50 text-amber-600' // Kuning/Oranye
                                 ],
+                                 [
+                                    'icon' => 'akar-calendar', 
+                                    'label' => 'Schedules', 
+                                    'href' => 'schedules-manage', 
+                                    'color' => 'hover:bg-amber-50 text-amber-600' // Kuning/Oranye
+                                ],
+                                [
+                                    'icon' => 'akar-people-group', 
+                                    'label' => 'Siswa', 
+                                    'href' => route('kasir.siswa.index'), 
+                                    'color' => 'hover:bg-amber-50 text-amber-600' // Kuning/Oranye
+                                ],
+                                
                             ];
                         @endphp
 
@@ -52,9 +65,8 @@
                                     {{ $item['label'] }}
                                 </span>
                             </a>
-@endforeach
+                        @endforeach
                     </nav>
-
                    <div class="flex items-center">
                         <form method="POST" action="{{ route('logout') }}" id="logout-form">
                             @csrf

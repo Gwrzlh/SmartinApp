@@ -47,8 +47,8 @@
         <div class="bg-white p-6 rounded-[20px] shadow-sm border border-gray-50">
             <h3 class="text-lg font-bold text-gray-800 mb-4">Shortcut</h3>
             <div class="space-y-3">
-                <a href="{{ route('admin.bundling.index') ?? '#' }}" class="block p-3 rounded-lg hover:bg-gray-50">Transaksi Baru</a>
-                <a href="{{ route('admin.users.index') ?? '#' }}" class="block p-3 rounded-lg hover:bg-gray-50">Riwayat Transaksi</a>
+                <a href="{{ route('kasir.transaction') ?? '#' }}" class="block p-3 rounded-lg hover:bg-gray-50">Transaksi Baru</a>
+                <a href="{{ route('kasir.riwayat.index') ?? '#' }}" class="block p-3 rounded-lg hover:bg-gray-50">Riwayat Transaksi</a>
             </div>
         </div>
 

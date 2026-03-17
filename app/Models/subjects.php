@@ -14,4 +14,9 @@ class subjects extends Model
     {
         return $this->belongsTo(categories::class, 'category_id', 'id');
     }
+
+    public function schedules()
+    {
+        return $this->hasMany(schedules::class, 'subject_id', 'id');
+    }
 }

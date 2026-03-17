@@ -3,7 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\authController;
 use App\Http\Controllers\RoleController;
-use App\Http\Controllers\Kasir\DashboardController as KasirDashboardController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\SubjectsController;
@@ -61,16 +61,50 @@ Route::middleware('auth')->group(function () {
 
     });
 
-    Route::middleware('role:kasir')->group(function () {
-        Route::get('kasir', [KasirDashboardController::class, 'index'])
-            ->name('kasir.dashboard');
-        Route::get('transaction', [transactionController::class, 'index'])->name('kasir.transaction'); 
-        Route::post('storeSiswa', [transactionController::class, 'storeSiswa'])->name('simpanSiswa');
-        Route::patch('siswa/{student}', [transactionController::class, 'updateSiswa'])->name('updateSiswa');
-        Route::post('siswa/delete{student}', [transactionController::class, 'destroySiswa'])->name('hapusSiswa');
-        
+        Route::middleware('role:kasir')->group(function () {
+            Route::get('/kasir', [DashboardController::class, 'index'])
+                ->name('kasir.dashboard');
+            Route::get('/transaction', [transactionController::class, 'index'])
+                ->name('kasir.transaction');
+
+            Route::get('/siswa-manage', [transactionController::class, 'siswaManage'])
+                ->name('kasir.siswa.index');
+            Route::get('/riwayat-transaksi', [transactionController::class, 'riwayatTransaksi'])
+                ->name('kasir.riwayat.index');
+
+            Route::prefix('siswa')->group(function(){
+                Route::post('/store', [transactionController::class, 'storeSiswa'])->name('simpanSiswa');
+                Route::patch('/{student}', [transactionController::class, 'updateSiswa'])->name('updateSiswa');
+                Route::post('/delete/{student}', [transactionController::class, 'destroySiswa'])->name('hapusSiswa');
+
+            });
+            Route::post('/siswa/select', [transactionController::class,'selectStudent'])
+                ->name('kasir.selectStudent');
+            Route::post('/cart/add', [transactionController::class,'addToCart'])
+                ->name('kasir.cart.add');
+            Route::post('/cart/remove/{items}', [transactionController::class, 'removeItem'])
+                ->name('kasir.cart.remove');
+            Route::post('/transaction/checkout',[transactionController::class,'checkout'])
+                ->name('kasir.checkout');
+            Route::get('/invoice/{id}', [transactionController::class, 'generateInvoice'])->name('kasir.invoice');
+            
+            Route::get('/transaction/{transaction_id}/schedules', [\App\Http\Controllers\SchedulePlacementController::class, 'showPlacementUI'])
+                ->name('kasir.transaction.schedules');
+            Route::post('/transaction/{transaction_id}/schedules', [\App\Http\Controllers\SchedulePlacementController::class, 'storeAssignments'])
+                ->name('kasir.transaction.saveSchedules');
+
+            Route::get('/schedules-manage', [\App\Http\Controllers\SchedulePlacementController::class, 'index'])
+                ->name('kasir.schedules.index');
+            Route::get('/schedules-manage/{id}', [\App\Http\Controllers\SchedulePlacementController::class, 'show'])
+                ->name('kasir.schedules.show')
+                ->where('id', '[0-9]+');
+            Route::get('/api/schedules/available/{subject_id}', [\App\Http\Controllers\SchedulePlacementController::class, 'getAvailableSchedules'])
+                ->name('kasir.schedules.available');
+            Route::post('/schedules-manage/reschedule', [\App\Http\Controllers\SchedulePlacementController::class, 'reschedule'])
+                ->name('kasir.schedules.reschedule');
+
         });
-});
+    });
 
 
     

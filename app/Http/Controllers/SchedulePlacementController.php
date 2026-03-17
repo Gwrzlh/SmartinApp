@@ -1,0 +1,173 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use App\Models\transactions;
+use App\Models\transaction_details;
+use App\Models\enrollments;
+use App\Models\schedules;
+use App\Models\EnrollmentSchedule;
+use Illuminate\Support\Facades\DB;
+
+class SchedulePlacementController extends Controller
+{
+    public function index()
+    {
+        $schedules = schedules::with(['subject', 'mentor'])
+            ->withCount(['enrollments as active_students_count' => function ($query) {
+                // Must explicitly specify the pivot table alias in older Laravel versions or just rely on the pivot condition
+                $query->where('enrollment_schedules.status', 'ongoing');
+            }])
+            ->orderBy('hari')
+            ->orderBy('jam_mulai')
+            ->get();
+
+        return view('Kasir.SchedulesManage', compact('schedules'));
+    }
+
+    public function show($id)
+    {
+        $schedule = schedules::with(['subject', 'mentor'])->findOrFail($id);
+        
+        $enrollmentSchedules = EnrollmentSchedule::with(['enrollment.student'])
+            ->where('schedule_id', $id)
+            ->where('status', 'ongoing')
+            ->get();
+
+        return view('Kasir.schedules.show', compact('schedule', 'enrollmentSchedules'));
+    }
+
+    public function getAvailableSchedules(Request $request, $subject_id)
+    {
+        $currentScheduleId = $request->query('current_schedule_id');
+
+        $schedules = schedules::with('mentor')
+            ->where('subject_id', $subject_id)
+            ->where('id', '!=', $currentScheduleId)
+            ->where('is_active', 1)
+            ->withCount(['enrollments as active_students_count' => function ($query) {
+                $query->where('enrollment_schedules.status', 'ongoing');
+            }])
+            ->get();
+
+        $availableSchedules = $schedules->filter(function ($schedule) {
+            return $schedule->active_students_count < $schedule->capacity;
+        })->values();
+
+        return response()->json($availableSchedules);
+    }
+
+    public function reschedule(Request $request)
+    {
+        $request->validate([
+            'enrollment_schedule_id' => 'required|exists:enrollment_schedules,id',
+            'target_schedule_id' => 'required|exists:schedules,id',
+        ]);
+
+        DB::beginTransaction();
+        try {
+            $enrollmentSchedule = EnrollmentSchedule::findOrFail($request->enrollment_schedule_id);
+            $targetSchedule = schedules::lockForUpdate()->findOrFail($request->target_schedule_id);
+
+            $currentEnrolledCount = EnrollmentSchedule::where('schedule_id', $targetSchedule->id)
+                ->where('status', 'ongoing')
+                ->count();
+
+            if ($currentEnrolledCount >= $targetSchedule->capacity) {
+                throw new \Exception('Jadwal tujuan sudah penuh.');
+            }
+
+            $enrollment = $enrollmentSchedule->enrollment;
+            if ($targetSchedule->subject_id != $enrollment->item_id) { // assuming item_id is subject_id
+                 throw new \Exception('Jadwal tujuan harus memiliki mata pelajaran yang sama.');
+            }
+
+            $enrollmentSchedule->update([
+                'schedule_id' => $targetSchedule->id
+            ]);
+
+            DB::commit();
+            return back()->with('success', 'Siswa berhasil dipindahkan jadwalnya.');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', $e->getMessage());
+        }
+    }
+    public function showPlacementUI($transaction_id)
+    {
+        $transaction = transactions::findOrFail($transaction_id);
+
+        $detailIds = transaction_details::where('transaction_id', $transaction_id)->pluck('id');
+
+        $enrollments = enrollments::with(['subject.schedules', 'student']) // assume student relation exists if needed, or we just pluck it.
+            ->whereIn('transaction_detail_id', $detailIds)
+            ->where('item_type', 'subject')
+            ->get();
+
+        if ($enrollments->isEmpty()) {
+            return redirect()->route('kasir.transaction')->with('success', 'Transaksi berhasil, tidak ada jadwal pelajaran yang perlu diatur.');
+        }
+
+        $studentInfo = \App\Models\students::find($enrollments->first()->student_id);
+
+        foreach ($enrollments as $enrollment) {
+            foreach ($enrollment->subject->schedules as $schedule) {
+                $enrolledCount = EnrollmentSchedule::where('schedule_id', $schedule->id)
+                    ->where('status', 'ongoing')
+                    ->count();
+                $schedule->remaining_capacity = $schedule->capacity - $enrolledCount;
+            }
+        }
+
+        return view('Kasir.schedule_placement', compact('transaction', 'enrollments', 'studentInfo'));
+    }
+
+    public function storeAssignments(Request $request, $transaction_id)
+    {
+        $assignments = $request->input('schedules'); // Array format: [enrollment_id => schedule_id]
+
+        if (empty($assignments)) {
+            return back()->with('error', 'Silakan pilih jadwal terlebih dahulu.');
+        }
+
+        try {
+            DB::transaction(function () use ($assignments) {
+                foreach ($assignments as $enrollment_id => $schedule_id) {
+                    if (empty($schedule_id)) {
+                        throw new \Exception("Ada mata pelajaran yang belum dipilih jadwalnya.");
+                    }
+
+                    // 1. Lock the schedule row to prevent race conditions
+                    $schedule = schedules::where('id', $schedule_id)->lockForUpdate()->firstOrFail();
+
+                    // 2. Real-time Capacity Check
+                    $enrolledCount = EnrollmentSchedule::where('schedule_id', $schedule_id)
+                        ->where('status', 'ongoing')
+                        ->count();
+
+                    if ($enrolledCount >= $schedule->capacity) {
+                        $subjectName = $schedule->subject->mapel_name ?? 'Mata Pelajaran';
+                        throw new \Exception("Jadwal untuk {$subjectName} pada {$schedule->hari} {$schedule->jam_mulai} sudah penuh!");
+                    }
+
+                    // 3. Save Assignment
+                    EnrollmentSchedule::create([
+                        'enrollment_id' => $enrollment_id,
+                        'schedule_id'   => $schedule_id,
+                        'status'        => 'ongoing'
+                    ]);
+                }
+            });
+
+            // If successful
+            return redirect()->route('kasir.transaction')->with('success', 'Jadwal siswa berhasil disimpan dan dikunci!');
+
+        } catch (\Exception $e) {
+            // Transaction failed, rollback triggered automatically
+            return back()->with('error', 'Ops, Gagal Menyimpan: ' . $e->getMessage());
+        }
+    }
+}
