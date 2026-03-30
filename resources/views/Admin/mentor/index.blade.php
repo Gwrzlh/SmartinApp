@@ -138,23 +138,25 @@
         const modal = document.getElementById('mentorModal');
         const modalContent = document.getElementById('modalContent');
         const url = "{{ route('admin.mentor.index') }}/" + id;
-        const mapelList = (Array.isArray(data.specialization) && data.specialization.length > 0) 
-                    ? data.specialization.join(', ') 
-                    : '-';
 
-
+        // Buka modal dan setel ke mode loading terlebih dahulu
         modal.classList.remove('invisible');
         document.getElementById('modalMentorName').textContent = 'Loading...';
         document.getElementById('modalMapelName').textContent = '';
-
         document.getElementById('modalGridBody').innerHTML = '<div class="col-span-2 flex justify-center items-center py-8"><div class="loading-spinner"></div></div>';
         
         fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
             .then(response => response.json())
             .then(data => {
-             
+                // PINDAHKAN KESINI: Sekarang variabel 'data' sudah ada isinya
+                const mapelList = (Array.isArray(data.specialization) && data.specialization.length > 0) 
+                    ? data.specialization.join(', ') 
+                    : '-';
+
+                // Update isi modal dengan data dari server
                 document.getElementById('modalMentorName').textContent = data.mentor_name;
-                document.getElementById('modalMapelName').textContent = data.specialization;
+                document.getElementById('modalMapelName').textContent = data.specialization; 
+                
                 document.getElementById('modalGridBody').innerHTML = `
                     <div class="space-y-1">
                         <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Nomor Telepon</p>
@@ -189,7 +191,7 @@
             .catch(err => {
                 Swal.fire({
                     title: 'Error!',
-                    text: 'Gagal memuat data Mapel. Silakan coba lagi.',
+                    text: 'Gagal memuat data Detail Mentor. Silakan coba lagi.',
                     icon: 'error',
                     confirmButtonColor: '#06b6d4',
                     confirmButtonText: 'OK'

@@ -11,6 +11,7 @@ use App\Http\Controllers\mentorController;
 use App\Http\Controllers\bundlingController;
 use App\Http\Controllers\scheduleController;
 use App\Http\Controllers\transactionController;
+use App\Http\Controllers\OwnerController;
 
 // =========================================
 // PUBLIC ROUTES (Tidak perlu login)
@@ -38,13 +39,6 @@ Route::middleware('auth')->group(function () {
 
         Route::get('dashboard', [RoleController::class, 'dashboard'])->name('dashboard');
 
-        // Route::prefix('users')->name('users.')->group(function() {
-        //     Route::get('/', [UserController::class, 'index'])->name('index'); // admin.users.index
-        //     Route::get('/create', [UserController::class, 'create'])->name('create');
-        //     Route::post('/store', [UserController::class, 'store'])->name('store');
-        //     Route::get('/{user}/edit', [UserController::class, 'edit'])->name('edit');
-        // });
-
         Route::resource('users', UserController::class);
         Route::get('users/search', [UserController::class, 'search'])->name('users.search');
         Route::resource('category', CategoryController::class);
@@ -56,9 +50,24 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::middleware('role:owner')->group(function () {
-        Route::get('owner', [RoleController::class, 'dashboard'])
+        Route::get('owner', [OwnerController::class, 'dashboard'])
             ->name('owner.dashboard');
-
+            Route::get('owner/laporan-keuangan', [OwnerController::class, 'laporanKeuangan'])
+            ->name('owner.laporanKeuangan');
+        Route::get('owner/laporan-keuangan/export', [OwnerController::class, 'exportExcel'])
+            ->name('owner.exportExcel');
+        Route::get('owner/manajemen-asset', [OwnerController::class, 'manajemenAsset'])
+            ->name('owner.manajemenAsset');
+        Route::get('owner/manajemen-staff', [UserController::class, 'manajemenStaff'])
+            ->name('owner.manajemenStaff');
+        Route::post('owner/users/{user}/toggle', [UserController::class, 'toggleStatus'])
+            ->name('owner.users.toggleStatus');
+        Route::post('owner/users/create', [UserController::class, 'store'])
+            ->name('owner.users.store');
+        Route::post('owner/users/{user}/update', [UserController::class, 'update'])
+            ->name('owner.users.update');
+        Route::get('owner/log-activity', [OwnerController::class, 'logActivity'])
+            ->name('owner.logActivity');
     });
 
         Route::middleware('role:kasir')->group(function () {

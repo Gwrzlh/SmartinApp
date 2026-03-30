@@ -21,29 +21,28 @@
             </div>
             
             <div class="flex flex-col sm:flex-row gap-3">
+                {{-- Form Search --}}
                 <form action="{{ route('admin.schedules.index') }}" method="GET" class="flex flex-col sm:flex-row gap-3">
-                    <div class="relative">
-                        <select name="filterbysubject" onchange="this.form.submit()" 
-                            class="pl-3 pr-10 py-2 w-full sm:w-48 rounded-xl border-2 border-gray-100 bg-white focus:border-cyan-500 focus:ring-4 focus:ring-cyan-500/10 outline-none transition-all text-sm appearance-none cursor-pointer">
-                            <option value="">Semua Mapel</option>
-                            @foreach($subjects as $subject)
-                                <option value="{{ $subject->id }}" {{ request('filterbysubject') == $subject->id ? 'selected' : '' }}>
-                                    {{ $subject->mapel_name }}
-                                </option>
-                            @endforeach
-                        </select>
-                        <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                            <x-akar-chevron-down class="w-4 h-4 text-gray-400" />
+                    <div class="relative group">
+                        <input type="text" name="search" value="{{ request('search') }}"
+                            placeholder="Cari Mapel atau Mentor..." 
+                            class="pl-10 pr-4 py-2 w-full sm:w-64 rounded-xl border-2 border-gray-100 bg-white focus:border-cyan-500 focus:ring-4 focus:ring-cyan-500/10 outline-none transition-all text-sm">
+                        
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <x-akar-search class="w-4 h-4 text-gray-400 group-focus-within:text-cyan-500" />
                         </div>
+                        {{-- Tombol submit hidden agar bisa enter --}}
+                        <button type="submit" class="hidden"></button>
                     </div>
-
-                    @if(request('filterbysubject'))
+                    
+                    @if(request('search'))
                         <a href="{{ route('admin.schedules.index') }}" class="inline-flex items-center px-3 py-2 text-sm text-red-500 hover:text-red-700 transition-colors">
                             <x-akar-circle-x class="w-4 h-4 mr-1" /> Reset
                         </a>
                     @endif
                 </form>
 
+                {{-- Tombol Tambah --}}
                 <a href="{{ route('admin.schedules.create') }}" class="inline-flex items-center justify-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-xl shadow-lg shadow-blue-200 transition-all active:scale-95">
                     <x-akar-calendar class="w-5 h-5 mr-2" />Tambah Jadwal
                 </a>
@@ -118,6 +117,14 @@
                     @endforelse
                 </tbody>
             </table>
+            <div class="px-6 py-4 bg-gray-50/50 border-t border-gray-100 flex items-center justify-between">
+                <p class="text-xs text-gray-500 font-medium">
+                    Menampilkan {{ $schedules->firstItem() ?? 0 }} sampai {{ $schedules->lastItem() ?? 0 }} dari {{ $schedules->total() }} Jadwal
+                </p>
+                <div class="pagination-custom">
+                    {{ $schedules->appends(request()->query())->links() }}
+                </div>
+            </div>
         </div>
     </div>
 </div>

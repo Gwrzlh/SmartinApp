@@ -12,16 +12,20 @@ class scheduleController extends Controller
 {
     public function index(Request $request)
     {
-        $subjects = subjects::all();
-        
-        // Kita hitung jumlah pendaftar lewat relasi enrollment_schedules (pivot)
+        $subjects = subjects::all(); // Tetap ambil untuk keperluan lain jika perlu
+
         $schedules = schedules::with(['subject', 'mentor'])
             ->withCount('enrollments') 
-            ->when($request->subject_id, function ($query) use ($request) {
-                return $query->where('subject_id', $request->subject_id);
+            ->when($request->search, function ($query) use ($request) {
+                $search = $request->search;
+                return $query->whereHas('subject', function($q) use ($search) {
+                    $q->where('mapel_name', 'like', "%{$search}%");
+                })->orWhereHas('mentor', function($q) use ($search) {
+                    $q->where('mentor_name', 'like', "%{$search}%");
+                });
             })
             ->latest()
-            ->paginate(10);
+            ->paginate(5);
 
         return view('Admin.schedules.index', compact('schedules', 'subjects'));
     }
@@ -60,6 +64,8 @@ class scheduleController extends Controller
         }
 
         schedules::create($request->all());
+
+        logActivity('Menambah Jadwal Kelas', 'Hari: ' . $request->hari . ' Jam: ' . $request->jam_mulai);
 
         return redirect()->route('admin.schedules.index')->with('success', 'Jadwal berhasil dibuat!');
     }
@@ -102,6 +108,8 @@ class scheduleController extends Controller
 
         $schedule->update($request->all());
 
+        logActivity('Mengubah Data Jadwal Kelas', 'Hari: ' . $request->hari . ' Jam: ' . $request->jam_mulai);
+
         return redirect()->route('admin.schedules.index')->with('success', 'Jadwal berhasil diperbarui!');
     }
 
@@ -142,6 +150,8 @@ class scheduleController extends Controller
             }
 
             $schedule->delete();
+
+            logActivity('Menghapus Jadwal Kelas');
 
             return redirect()->route('admin.schedules.index')->with('success', 'Jadwal berhasil dihapus!');
         } catch (\Exception $e) {

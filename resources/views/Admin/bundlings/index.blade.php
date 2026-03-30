@@ -27,21 +27,6 @@
             
            <div class="flex flex-col sm:flex-row gap-3">
                 <form action="{{ route('admin.bundling.index') }}" method="GET" class="flex flex-col sm:flex-row gap-3">
-                    <div class="relative">
-                        {{-- <select name="filterbysubject" onchange="this.form.submit()" 
-                            class="pl-3 pr-10 py-2 w-full sm:w-48 rounded-xl border-2 border-gray-100 bg-white focus:border-cyan-500 focus:ring-4 focus:ring-cyan-500/10 outline-none transition-all text-sm appearance-none cursor-pointer">
-                            <option value="">Semua Mapel</option>
-                            @foreach($subjects as $subject)
-                                <option value="{{ $subject->id }}" {{ request('filterbysubject') == $subject->id ? 'selected' : '' }}>
-                                    {{ $subject->mapel_name }}
-                                </option>
-                            @endforeach
-                        </select> --}}
-                        <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                            <x-akar-chevron-down class="w-4 h-4 text-gray-400" />
-                        </div>
-                    </div>
-
                     <div class="relative group">
                         <input type="text" name="search" value="{{ request('search') }}"
                             placeholder="Cari nama Bundling..." 

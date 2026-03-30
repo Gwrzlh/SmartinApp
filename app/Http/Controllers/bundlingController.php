@@ -37,11 +37,9 @@ class bundlingController extends Controller
        ]);
 
        $isActive = $request->has('isActive') ? 1 : 0;
-
        $cleanPrice = str_replace('.', '', $request->bundling_price);
     
        try{
-
          db::beginTransaction();
             $bundling = bundlings::create([
                 'bundling_name' => $request->bundling_name,
@@ -56,6 +54,7 @@ class bundlingController extends Controller
                 ]);
             }
             db::commit();
+            logActivity('Membuat Bundling Baru','   Bundling : '.$request->bundling_name);
             return redirect()->route('admin.bundling.index')->with('success', 'Bundling created successfully.');
         } catch (\Exception $e) {
             db::rollback();
@@ -65,7 +64,6 @@ class bundlingController extends Controller
     public function edit(bundlings $bundling)
     {
         $subjects = subjects::all();
-        // details table uses `subject_id` column
         $selectedSubjects = $bundling->details->pluck('subject_id')->toArray();
         return view('Admin.bundlings.update', compact('bundling', 'subjects', 'selectedSubjects'));
     }
@@ -84,15 +82,15 @@ class bundlingController extends Controller
                 'bundling_price' => $cleanPrice,
                 'is_active' => $isActive,
             ]);
+            $bundling->details()->delete();
 
-           $bundling->details()->delete();
-           
             foreach ($request->subjects_id as $subject_id) {
                 bundling_details::create([
                     'bundling_id' => $bundling->id,
                     'subject_id' => $subject_id,
                 ]);
             }
+            logActivity('Melakukan Update Bundling','   Bundling : '.$request->bundling_name);
             db::commit();
             return redirect()->route('admin.bundling.index')->with('success', 'Bundling updated successfully.');
         } catch (\Exception $e) {
@@ -104,11 +102,14 @@ class bundlingController extends Controller
     public function destroy(bundlings $bundling)
     {
         $bundling->delete();
+        logActivity('Menghapus Bundling');
         return redirect()->route('admin.bundling.index')->with('success', 'Bundling deleted successfully.');
     }
     public function show($id)
     {
         $bundling = bundlings::findOrFail($id);
+
+        logActivity('Melihat Detail Bundling','   Bundling : '.$bundling->bundling_name);
 
         if (request()->ajax()) {
             return response()->json([
@@ -124,7 +125,6 @@ class bundlingController extends Controller
             ]);
         }
 
-        // Jika diakses biasa (bukan AJAX), bisa diarahkan ke view lain atau abort
         return abort(404);
     }
 }

@@ -46,7 +46,13 @@ class UserController extends Controller
             'is_active' => $isActive,
         ]);
 
-        return redirect()->route('admin.users.index')->with('success', 'User berhasil ditambahkan!');
+        logActivity('Menambah User Baru', 'User: ' . $request->username);
+
+        if(auth()->user()->role == 'admin'){
+            return redirect()->route('admin.users.index')->with('success', 'User berhasil ditambahkan!');
+        }else{
+            return redirect()->route('owner.manajemenStaff')->with('success', 'User berhasil ditambahkan!');
+        }
     }
     public function edit(User $user)
     {
@@ -74,11 +80,19 @@ class UserController extends Controller
             'is_active' => $isActive,
         ]);
 
-        return redirect()->route('admin.users.index')->with('success', 'User updated successfully.');
+        logActivity('Mengubah Data User', 'User: ' . $request->username);
+
+        if(auth()->user()->role == 'admin'){
+            return redirect()->route('admin.users.index')->with('success', 'User updated successfully.');
+        }else{
+            return redirect()->route('owner.manajemenStaff')->with('success', 'User updated successfully.');
+        }
     }
     public function destroy(User $user)
     {
+        $username = $user->username;
         $user->delete();
+        logActivity('Menghapus User', 'User: ' . $username);
         return redirect()->route('admin.users.index')->with('success', 'User deleted successfully.');
     }
     public function show($id)
@@ -101,5 +115,54 @@ class UserController extends Controller
         // Jika diakses biasa (bukan AJAX), bisa diarahkan ke view lain atau abort
         return abort(404);
     }
-  
+    public function manajemenStaff(Request $request)
+    {
+        $search = $request->get('search');
+
+        $users = User::whereIn('role', ['admin', 'kasir'])
+            ->when($search, function ($query) use ($search) {
+                return $query->where(function ($q) use ($search) {
+                    $q->where('username', 'like', "%{$search}%")
+                      ->orWhere('email', 'like', "%{$search}%")
+                      ->orWhere('full_name', 'like', "%{$search}%");
+                });
+            })
+            ->latest()
+            ->paginate(10)
+            ->withQueryString();
+
+        // Menambahkan statistik untuk setiap user
+        $users->getCollection()->transform(function ($user) {
+            // Last Login dari ActivityLog
+            $lastLogin = \App\Models\ActivityLog::where('user_id', $user->id)
+                ->where('action', 'Login Ke Aplikasi')
+                ->latest()
+                ->first();
+            $user->last_login_at = $lastLogin ? $lastLogin->created_at : null;
+
+            // Statistik nominal transaksi untuk Kasir
+            if ($user->role === 'kasir') {
+                $user->total_revenue = \App\Models\transactions::where('user_id', $user->id)
+                    ->where('status_pembayaran', 'paid')
+                    ->sum('total_bayar');
+            } else {
+                $user->total_revenue = 0;
+            }
+
+            return $user;
+        });
+
+        return view('Owner.manajemanStaff', compact('users'));
+    }
+
+    public function toggleStatus(User $user)
+    {
+        $user->is_active = !$user->is_active;
+        $user->save();
+
+        $status = $user->is_active ? 'diaktifkan' : 'dinonaktifkan';
+        logActivity('Mengubah Status User', "User {$user->username} telah {$status}");
+
+        return back()->with('success', "Status user {$user->username} berhasil {$status}.");
+    }
 }

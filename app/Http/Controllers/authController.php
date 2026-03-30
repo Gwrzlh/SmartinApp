@@ -14,7 +14,6 @@ class authController extends Controller
    
     public function index()
     {
-        // Jika sudah login, redirect ke dashboard
         if (Auth::check()) {
             return redirect()->route('dashboard');
         }
@@ -38,12 +37,10 @@ class authController extends Controller
             ]
         );
 
-
         $user = User::where('email', $credentials['email_or_username'])
             ->orWhere('username', $credentials['email_or_username'])
             ->first();
 
-    
         if (!$user) {
             Log::warning('Login attempt dengan user tidak ditemukan', [
                 'identifier' => $credentials['email_or_username'],
@@ -57,7 +54,6 @@ class authController extends Controller
             ]);
         }
 
-  
         if (!Hash::check($credentials['password'], $user->password)) {
             Log::warning('Login attempt dengan password salah', [
                 'user_id' => $user->id,
@@ -72,7 +68,6 @@ class authController extends Controller
             ]);
         }
 
-        // 5. CEGAH LOGIN USER INACTIVE (opsional, jika ada column is_active)
         if (!$user->is_active) {
             Log::warning('Login attempt user inactive', ['user_id' => $user->id]);
             throw ValidationException::withMessages([
@@ -80,10 +75,7 @@ class authController extends Controller
             ]);
         }
 
-        // 6. LOGIN USER (create session)
         Auth::login($user, remember: $request->boolean('remember'));
-
-       
         $request->session()->regenerate();
 
         Log::info('User berhasil login', [
@@ -95,18 +87,14 @@ class authController extends Controller
             'timestamp' => now(),
         ]);
 
+        logActivity('Login Ke Aplikasi');
 
         return $this->redirectByRole($user);
     }
 
-    /**
-     * Redirect ke dashboard sesuai role
-     */
     private function redirectByRole($user)
     {
         
-
-
         return match($user->role) {
             'admin' => redirect()->route('admin.dashboard')
                 ->with('success', 'Selamat datang, ' . $user->full_name . '!'),
@@ -119,15 +107,10 @@ class authController extends Controller
         };
     }
 
-    /**
-     * Logout user
-     * Route: POST /logout
-     */
     public function logout(Request $request)
     {
         $user = Auth::user();
 
-        // Log logout activity
         if ($user) {
             Log::info('User logout', [
                 'user_id' => $user->id,
@@ -136,14 +119,11 @@ class authController extends Controller
                 'timestamp' => now(),
             ]);
         }
+        
+        logActivity('Logout Dari Aplikasi');
 
-        // Logout
         Auth::logout();
-
-        // Invalidate session
         $request->session()->invalidate();
-
-        // Regenerate CSRF token
         $request->session()->regenerateToken();
 
         return redirect()->route('login')

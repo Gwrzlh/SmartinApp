@@ -9,6 +9,10 @@ class transactions extends Model
     protected $table = 'transactions';
     protected $fillable = ['user_id','tgl_bayar','total_bayar','uang_diterima','uang_kembali','status_pembayaran'];
 
+    protected $casts = [
+        'tgl_bayar' => 'date',
+    ];
+
     public function details()
     {
         return $this->hasMany(transaction_details::class, 'transaction_id');

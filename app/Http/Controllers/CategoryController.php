@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\categories;
 use Illuminate\Http\Request;
+use App\Models\EnrollmentSchedule;
 
 class CategoryController extends Controller
 {
@@ -14,7 +15,7 @@ class CategoryController extends Controller
         $categories = categories::when($search, function ($query) use ($search) {
             return $query->where('category_name', 'like', "%{$search}%");
         })
-        ->paginate(5) // Menampilkan 10 data per halaman
+        ->paginate(5)
         ->withQueryString();
 
         return view('Admin.Category.index', compact('categories'));
@@ -33,6 +34,7 @@ class CategoryController extends Controller
             'category_name' => $request->category_name,
         ]);
 
+        logActivity('Membuat Category Baru','Category: '.$request->category_name);
         return redirect()->route('admin.category.index')->with('success', 'Category created successfully.');
     }
     public function edit(categories $category)
@@ -49,15 +51,35 @@ class CategoryController extends Controller
             'category_name' => $request->category_name,
         ]);
 
+        logActivity('Melakukan Update Category','Category: '.$request->category_name);
         return redirect()->route('admin.category.index')->with('success', 'Category updated successfully.');
     }
     public function destroy(categories $category)
-    {
-        
-        $category->subjects()->delete(); 
-        $category->delete();
+    {   
+        try {
+            if ($category->subjects()->count() > 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Kategori tidak bisa dihapus karena masih digunakan oleh Mata Pelajaran!'
+                ], 400); // 400 Bad Request
+            }
 
-        return redirect()->route('admin.category.index')
-            ->with('success', 'Kategori dan semua Mapel di dalamnya berhasil dihapus.');
+            // Jika aman, lakukan penghapusan
+            $categoryName = $category->category_name;
+            $category->delete();
+
+            logActivity('Menghapus Category', ' Category: ' . $categoryName);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Kategori berhasil dihapus.'
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan sistem: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }

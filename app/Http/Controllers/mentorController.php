@@ -18,7 +18,6 @@ class mentorController extends Controller
         $subjects = subjects::all();
 
         $mentors = mentors::with('subjects')
-            // 1. Logika Pencarian Teks (Nama, Gender, No Telp)
             ->when($search, function ($query) use ($search) {
                 return $query->where(function($q) use ($search) {
                     $q->where('mentor_name', 'like', "%{$search}%")
@@ -26,13 +25,12 @@ class mentorController extends Controller
                     ->orWhere('phone_number', 'like', "%{$search}%");
                 });
             })
-            // 2. Logika Filter Mapel (Sekarang mencari ke dalam relasi Many-to-Many)
             ->when($filterbysubject, function ($query) use ($filterbysubject) {
                 return $query->whereHas('subjects', function ($q) use ($filterbysubject) {
                     $q->where('subjects.id', $filterbysubject);
                 });
             })
-            ->latest() // Menampilkan yang terbaru di atas
+            ->latest()  
             ->paginate(5)
             ->withQueryString();
 
@@ -62,6 +60,8 @@ class mentorController extends Controller
           ]);
 
           $mentor->subjects()->attach($request->spesialization_id);
+
+          logActivity('Menambah Mentor Baru', 'Mentor: ' . $request->mentor_name);
 
           db::commit();
           return redirect()->route('admin.mentor.index')->with('success', 'Mentor berhasil ditambahkan.');
@@ -106,6 +106,8 @@ class mentorController extends Controller
 
             $mentor->subjects()->attach($request->spesialization_id);
 
+            logActivity('Mengubah Data Mentor', 'Mentor: ' . $request->mentor_name);
+
             DB::commit();
             return redirect()->route('admin.mentor.index')->with('success', 'Data mentor berhasil diperbarui.');
 
@@ -116,7 +118,9 @@ class mentorController extends Controller
     }
     public function destroy(mentors $mentor)
     {
+        $mentor_name = $mentor->mentor_name;
         $mentor->delete();
+        logActivity('Menghapus Mentor', 'Mentor: ' . $mentor_name);
         return redirect()->route('admin.mentor.index')->with('success', 'Mentor deleted successfully.');
     }
     public function show($id)

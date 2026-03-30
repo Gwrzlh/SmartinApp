@@ -49,6 +49,8 @@ class SubjectsController extends Controller
             'description' => $request->description,
         ]);
 
+        logActivity('Menambah Mapel Baru', 'Mapel: ' . $request->mapel_name);
+
         return redirect()->route('admin.subjects.index')->with('success', 'Mapel created successfully.');
     }
     public function edit(Request $request, subjects $subject)
@@ -74,11 +76,15 @@ class SubjectsController extends Controller
             'description' => $request->description,
         ]);
 
+        logActivity('Mengubah Data Mapel', 'Mapel: ' . $request->mapel_name);
+
         return redirect()->route('admin.subjects.index')->with('success', 'Subject updated successfully.');
     }
     public function destroy(subjects $subject)
     {
+        $mapel_name = $subject->mapel_name;
         $subject->delete();
+        logActivity('Menghapus Mapel', 'Mapel: ' . $mapel_name);
         return redirect()->route('admin.subjects.index')->with('success', 'Subject deleted successfully.');
     }
     public function show($id)

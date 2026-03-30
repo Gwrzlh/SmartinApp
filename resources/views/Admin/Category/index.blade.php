@@ -106,7 +106,7 @@
     function confirmDelete(button) {
         Swal.fire({
             title: 'Konfirmasi Hapus',
-            text: 'Apakah Anda yakin ingin menghapus kategori ini? Data yang dihapus tidak dapat dikembalikan.',
+            text: 'Apakah Anda yakin ingin menghapus kategori ini?',
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#ef4444',
@@ -117,14 +117,14 @@
             if (result.isConfirmed) {
                 const form = button.closest('.deleteForm');
                 
-                // Show loading
+                // Tampilkan loading
                 Swal.fire({
-                    title: 'Menghapus...',
-                    text: 'Mohon tunggu, data sedang dihapus.',
+                    title: 'Memproses...',
+                    text: 'Mohon tunggu sebentar.',
                     icon: 'info',
                     allowOutsideClick: false,
                     allowEscapeKey: false,
-                    didOpen: (modal) => {
+                    didOpen: () => {
                         Swal.showLoading();
                     }
                 });
@@ -133,25 +133,41 @@
                     method: 'POST',
                     headers: {
                         'X-CSRF-TOKEN': form.querySelector('input[name="_token"]').value,
-                        'X-Requested-With': 'XMLHttpRequest'
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json' // Minta kembalian berupa JSON
                     },
                     body: new FormData(form)
                 })
-                .then(() => {
-                    Swal.fire({
-                        title: 'Berhasil!',
-                        text: 'Kategori berhasil dihapus.',
-                        icon: 'success',
-                        confirmButtonColor: '#06b6d4',
-                        confirmButtonText: 'OK'
-                    }).then(() => {
-                        location.reload();
-                    });
+                .then(async (response) => {
+                    const data = await response.json();
+                    
+                    if (response.ok && data.success) {
+                        // Jika berhasil (Status 200)
+                        Swal.fire({
+                            title: 'Berhasil!',
+                            text: data.message,
+                            icon: 'success',
+                            confirmButtonColor: '#06b6d4',
+                            confirmButtonText: 'OK'
+                        }).then(() => {
+                            location.reload();
+                        });
+                    } else {
+                        // Jika dilarang karena ada relasi (Status 400) atau error lain
+                        Swal.fire({
+                            title: 'Peringatan!',
+                            text: data.message,
+                            icon: 'warning', // Icon warning agar terlihat elegan
+                            confirmButtonColor: '#06b6d4',
+                            confirmButtonText: 'OK'
+                        });
+                    }
                 })
-                .catch(() => {
+                .catch((error) => {
+                    // Jika ada error jaringan/server mati
                     Swal.fire({
                         title: 'Error!',
-                        text: 'Gagal menghapus kategori.',
+                        text: 'Gagal terhubung ke server.',
                         icon: 'error',
                         confirmButtonColor: '#06b6d4',
                         confirmButtonText: 'OK'

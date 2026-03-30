@@ -18,7 +18,7 @@
 
         <nav class="flex-1 ml-2 space-y-2">
             
-            <a href="#" class="flex items-center p-3 text-gray-600 hover:bg-cyan-50 hover:text-cyan-600 rounded-xl transition-colors group/item">
+            <a href="{{ route('owner.dashboard') }}" class="flex items-center p-3 text-gray-600 hover:bg-cyan-50 hover:text-cyan-600 rounded-xl transition-colors group/item {{ request()->routeIs('owner.dashboard') ? 'bg-cyan-50 text-cyan-600' : 'text-gray-600 hover:bg-cyan-50 hover:text-cyan-600' }}">
                 <div class="flex-shrink-0">
                     <x-akar-home class="w-7 h-7" />
                 </div>
@@ -27,25 +27,34 @@
                 </span>
             </a>
 
-            <a href="#" class="flex items-center p-3 text-gray-600 hover:bg-cyan-50 hover:text-cyan-600 rounded-xl transition-colors group/item">
+            <a href="{{ route('owner.laporanKeuangan') }}" class="flex items-center p-3 text-gray-600 hover:bg-cyan-50 hover:text-cyan-600 rounded-xl transition-colors group/item {{ request()->routeIs('owner.laporanKeuangan') ? 'bg-cyan-50 text-cyan-600' : 'text-gray-600 hover:bg-cyan-50 hover:text-cyan-600' }}">
                 <div class="flex-shrink-0">
                     <x-akar-clipboard class="w-7 h-7" />
                 </div>
                 <span class="ml-4 font-medium whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all duration-500 transform translate-x-[-10px] group-hover:translate-x-0">
-                    Monitoring Transaksi
+                    Laporan keuangan
                 </span>
             </a>
 
-            <a href="#" class="flex items-center p-3 text-gray-600 hover:bg-cyan-50 hover:text-cyan-600 rounded-xl transition-colors group/item">
+            <a href="{{ route('owner.manajemenAsset') }}" class="flex items-center p-3 text-gray-600 hover:bg-cyan-50 hover:text-cyan-600 rounded-xl transition-colors group/item {{ request()->routeIs('owner.manajemenAsset') ? 'bg-cyan-50 text-cyan-600' : 'text-gray-600 hover:bg-cyan-50 hover:text-cyan-600' }}">
                 <div class="flex-shrink-0">
                     <x-akar-shipping-box-v1 class="w-7 h-7" />
                 </div>
                 <span class="ml-4 font-medium whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all duration-500 transform translate-x-[-10px] group-hover:translate-x-0">
-                    Monitoring Product
+                    Manajemen Asset
                 </span>
             </a>
 
-            <a href="#" class="flex items-center p-3 text-gray-600 hover:bg-cyan-50 hover:text-cyan-600 rounded-xl transition-colors group/item">
+            <a href="{{ route('owner.manajemenStaff') }}" class="flex items-center p-3 text-gray-600 hover:bg-cyan-50 hover:text-cyan-600 rounded-xl transition-colors group/item {{ request()->routeIs('owner.manajemenStaff') ? 'bg-cyan-50 text-cyan-600' : 'text-gray-600 hover:bg-cyan-50 hover:text-cyan-600' }}">
+                <div class="flex-shrink-0">
+                    <x-akar-people-multiple class="w-7 h-7" />
+                </div>
+                <span class="ml-4 font-medium whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all duration-500 transform translate-x-[-10px] group-hover:translate-x-0">
+                    Manajemen Staff
+                </span>
+            </a>
+
+            <a href="{{ route('owner.logActivity') }}" class="flex items-center p-3 text-gray-600 hover:bg-cyan-50 hover:text-cyan-600 rounded-xl transition-colors group/item {{ request()->routeIs('owner.logActivity') ? 'bg-cyan-50 text-cyan-600' : 'text-gray-600 hover:bg-cyan-50 hover:text-cyan-600' }}">
                 <div class="flex-shrink-0">
                     <x-akar-clock class="w-7 h-7" />
                 </div>

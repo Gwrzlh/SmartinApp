@@ -21,7 +21,11 @@ class transactionController extends Controller
     {
         $cashierName = Auth::user()->full_name ?? Auth::user()->name ?? 'Kasir';
 
-        // 1. Logika Otomatis Update Status Siswa (Active -> Inactive jika expired)
+        // Auto-update enrollments yang sudah melewati masa aktif menjadi inactive
+        enrollments::where('status_pembelajaran', 'active')
+            ->where('expired_at', '<', now()->toDateString())
+            ->update(['status_pembelajaran' => 'inactive']);
+
         $activeSiswa = students::where('status', 'active')->get();
         foreach ($activeSiswa as $student) {
             $stillHasActiveCourse = enrollments::where('student_id', $student->id)
@@ -34,15 +38,21 @@ class transactionController extends Controller
             }
         }
 
-        // 2. Inisialisasi Data Dasar dari Session & Request (Diletakkan di awal agar stabil)
         $selectedStudent = session()->has('selected_student') ? students::find(session('selected_student')) : null;
         $cart = session('cart', []);
         $mode = $request->mode ?? 'paket';
         
-        // Ambil daftar siswa inactive untuk ditampilkan di UI (Mode SPP)
-        $inactiveStudents = students::where('status', 'inactive')->get();
+        $inactiveStudents = students::whereHas('enrollments', function($q) {
+                $q->where('status_pembelajaran', 'inactive');
+            })
+            ->when($request->filled('q_spp'), function ($query) use ($request) {
+                $query->where(function ($q) use ($request) {
+                    $q->where('student_name', 'like', '%' . $request->q_spp . '%')
+                      ->orWhere('student_nik', 'like', '%' . $request->q_spp . '%');
+                });
+            })
+            ->get();
 
-        // 3. Logika Penjadwalan (Crucial & Important)
         $transaction_id = $request->query('transaction_id');
         $enrollmentsToSchedule = collect();
         $studentForSchedule = null;
@@ -69,7 +79,6 @@ class transactionController extends Controller
             }
         }
 
-        // 4. Query Daftar Siswa untuk Pencarian/Sidebar
         $students = students::query()
             ->when($request->filled('q_student'), function ($q) use ($request) {
                 $q->where('student_name', 'like', '%' . $request->q_student . '%');
@@ -77,7 +86,6 @@ class transactionController extends Controller
             ->orderBy('student_name')
             ->get();
 
-        // 5. Query Produk Berdasarkan Mode (Paket / Mapel)
         $bundlings = [];
         $subjects = [];
 
@@ -117,61 +125,57 @@ class transactionController extends Controller
                 ->get();
         }
 
-        // 6. Logika Otomatis Masukkan SPP ke Cart (Jimmy akan terdeteksi di sini)
-        if ($selectedStudent && ($mode == 'spp' || $selectedStudent->status == 'inactive')) {
-            $enrollments = enrollments::where('student_id', $selectedStudent->id)
-                ->where('status_pembelajaran', 'active')
+        $studentEnrollments = collect();
+        if ($selectedStudent && $mode == 'spp') {
+            $studentEnrollments = enrollments::where('student_id', $selectedStudent->id)
                 ->with('subject')
                 ->get();
-
-            foreach ($enrollments as $enroll) {
-                if ($enroll->subject) {
-                    // Mencegah duplikasi item yang sama di cart
-                    $exists = collect($cart)->where('type', 'spp')->where('id', $enroll->id)->first();
-                    if (!$exists) {
-                        $cart[] = [
-                            'type' => 'spp',
-                            'id' => $enroll->id,
-                            'name' => 'SPP - ' . $enroll->subject->mapel_name . ' (Masa Aktif: ' . ($enroll->expired_at ? \Carbon\Carbon::parse($enroll->expired_at)->format('d M Y') : '-') . ')',
-                            'price' => $enroll->subject->monthly_price,
-                            'quantity' => 1
-                        ];
-                    }
-                }
-            }
-            // Update session cart dengan data terbaru
-            session(['cart' => $cart]);
         }
 
-        // 7. Data Pendukung Lainnya
         $categories = categories::all();
-        $countInactive = students::where('status', 'inactive')->count();
+        $countInactive = students::whereHas('enrollments', function($q) {
+            $q->where('status_pembelajaran', 'inactive');
+        })->count();
         $totalAmount = collect($cart)->sum(fn($item) => $item['price'] * ($item['quantity'] ?? 1));
 
         return view('Kasir.transaksi', compact(
             'students', 'bundlings', 'subjects', 'inactiveStudents',
             'categories', 'countInactive', 'mode', 'selectedStudent', 'cart', 'totalAmount', 'cashierName',
-            'transaction_id', 'enrollmentsToSchedule', 'studentForSchedule'
+            'transaction_id', 'enrollmentsToSchedule', 'studentForSchedule', 'studentEnrollments'
         ));
     }
 
-    public function storeSiswa(Request $request){
+    public function storeSiswa(Request $request) 
+    {
         $request->validate([
             'student_name' => 'required',
-            'student_email' => 'required',
+            'student_email' => 'required|email|unique:students,email', 
             'student_Tlp' => 'required',
             'gender' =>'required'
         ]);
 
-        $latestStudent = students::whereMonth('created_at', now()->month)
-                            ->whereYear('created_at', now()->year)
-                            ->latest()
+        // AMBIL NIK TERBESAR di bulan & tahun ini
+       // 1. Ambil prefix (TahunBulan)
+        $prefix = now()->format('Ym');
+
+        // 2. Cari NIK terakhir TERMASUK yang sudah di-soft delete (withTrashed)
+        $latestStudent = students::withTrashed() // PENTING: Cek semua data termasuk yang di-trash
+                            ->where('student_nik', 'LIKE', $prefix . '%')
+                            ->orderByRaw('CAST(student_nik AS UNSIGNED) DESC')
                             ->first();
 
-        $sequence = $latestStudent ? (int) substr($latestStudent->student_nik, -4) + 1 : 1;
-        $nik = now()->format('Ym') . str_pad($sequence, 4, '0', STR_PAD_LEFT);
+        if ($latestStudent) {
+            // Ambil 4 angka terakhir dari NIK yang benar-benar paling besar di DB
+            $lastSequence = (int) substr($latestStudent->student_nik, -4);
+            $sequence = $lastSequence + 1;
+        } else {
+            $sequence = 1;
+        }
 
-            students::create([
+        $nik = $prefix . str_pad($sequence, 4, '0', STR_PAD_LEFT);
+
+        // Proses Create
+        students::create([
             'student_nik'  => $nik,
             'student_name' => $request->student_name,
             'gender'       => $request->gender,
@@ -180,6 +184,8 @@ class transactionController extends Controller
             'email'        => $request->student_email,
             'status'       => 'inactive',
         ]);
+
+        logActivity('Mendaftarkan Siswa Baru', 'Siswa: ' . $request->student_name);
 
         return redirect()->back()->with('success', 'Siswa berhasil didaftarkan dengan NIK: ' . $nik);
     }
@@ -201,12 +207,16 @@ class transactionController extends Controller
             'email'        => $request->student_email,
         ]);
 
+        logActivity('Mengubah Data Siswa', 'Siswa: ' . $request->student_name);
+
         return redirect()->back()->with('success', 'Data siswa berhasil diperbarui.');
     }
     public function destroySiswa(students $student)
     {
-        $student->delete();
-        return redirect()->back()->with('success', 'Data siswa berhasil dihapus.');
+        $student_name = $student->student_name;
+        $student->delete(); 
+        logActivity('Menghapus Siswa (Soft Delete)', 'Siswa: ' . $student_name);
+        return redirect()->back()->with('success', 'Data siswa berhasil dinonaktifkan dari sistem.');
     }
    
     public function selectStudent(Request $request)
@@ -232,26 +242,6 @@ class transactionController extends Controller
                 ];
             }
         }
-
-        if ($mode == 'spp' || $student->status == 'inactive') {
-            $enrollments = enrollments::where('student_id', $studentId)
-                ->where('status_pembelajaran', 'active')
-                ->with('subject')
-                ->get();
-            
-            foreach ($enrollments as $enroll) {
-                if ($enroll->subject) {
-                    $cart[] = [
-                        'type' => 'spp',
-                        'id' => $enroll->id, // Menggunakan Enrollment ID untuk pelacakan
-                        'name' => 'SPP - ' . $enroll->subject->mapel_name . ' (Sampai: ' . \Carbon\Carbon::parse($enroll->expired_at)->format('d M Y') . ')',
-                        'price' => $enroll->subject->monthly_price,
-                        'quantity' => 1
-                    ];
-                }
-            }
-        }
-
         session(['cart'=>$cart]);
         return redirect()->back();
     }
@@ -314,7 +304,7 @@ class transactionController extends Controller
                     'price' => $item['price']
                 ]);
 
-                if (in_array($item['type'], ['subject', 'bundling', 'spp'])) $shouldActivate = true;
+                if (in_array($item['type'], ['subject', 'bundling'])) $shouldActivate = true;
                 // kalo beli per matapelajaran 
                 if ($item['type'] == 'subject') {
                     enrollments::create([
@@ -351,7 +341,8 @@ class transactionController extends Controller
                                     : now();
 
                         $enrollment->update([
-                            'expired_at' => $baseDate->addMonth()
+                            'expired_at' => $baseDate->addMonth(),
+                            'status_pembelajaran' => 'active'
                         ]);
                     }
                 }
@@ -362,10 +353,11 @@ class transactionController extends Controller
             }
 
             DB::commit();
-            session()->forget(['cart','selected_student']);
 
-            return redirect()->route('kasir.transaction', ['transaction_id' => $transaction->id, 'print_invoice' => $transaction->id])
-                ->with('success','Transaksi berhasil!');
+            logActivity('Melakukan Transaksi Pembayaran', 'ID Transaksi: ' . $transaction->id . ' sebesar Rp.' . number_format($total, 0, ',', '.'));
+            session()->forget(['cart', 'selected_student']);
+            return redirect()->route('kasir.transaction', ['print_invoice' => $transaction->id])
+                ->with('success', 'Transaksi berhasil! Struk sedang dicetak.');
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->with('error','Checkout gagal : '.$e->getMessage());
@@ -409,7 +401,7 @@ class transactionController extends Controller
                 $q->where('status', $request->status);
             })
             ->with(['enrollments.subject'])
-            ->paginate(10)->withQueryString();
+            ->paginate(5)->withQueryString();
 
         return view('Kasir.siswaManage', compact('students'));
     }

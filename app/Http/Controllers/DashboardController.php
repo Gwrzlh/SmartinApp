@@ -12,47 +12,68 @@ use Illuminate\Support\Facades\Auth;
 
 class DashboardController extends Controller
 {
-    public function index()
-    {
-        $today = Carbon::now()->translatedFormat('d F Y');
-        $cashierName = Auth::user()->full_name ?? Auth::user()->name ?? 'Kasir';
-        $officeStatus = 'Open';
+        public function index()
+        {
+            $todayDate = \Carbon\Carbon::now();
+            $todayStr = $todayDate->translatedFormat('d F Y');
+            $cashierName = Auth::user()->full_name ?? Auth::user()->name ?? 'Kasir';
+            
+            // --- 1. SYNC STATUS SISWA (Logic dari Transaksi) ---
+            // Update otomatis siswa menjadi inactive jika masa kursus habis
+            $activeSiswa = \App\Models\students::where('status', 'active')->get();
+            foreach ($activeSiswa as $student) {
+                $stillHasActiveCourse = \App\Models\enrollments::where('student_id', $student->id)
+                    ->where('status_pembelajaran', 'active')
+                    ->where('expired_at', '>=', now()->toDateString())
+                    ->exists();
 
-        $unpaidCount = transactions::where('status_pembayaran', 'unpaid')->count();
-        $inactiveCount = students::where('status', 'inactive')->count();
+                if (!$stillHasActiveCourse) {
+                    $student->update(['status' => 'inactive']);
+                }
+            }
 
-        $dayMap = [
-            'Monday' => 'Senin', 'Tuesday' => 'Selasa', 'Wednesday' => 'Rabu',
-            'Thursday' => 'Kamis', 'Friday' => 'Jumat', 'Saturday' => 'Sabtu', 'Sunday' => 'Minggu'
-        ];
+            // --- 2. STATISTIK KASIR ---
+            $data = [
+                // Total uang masuk dari transaksi 'paid' hari ini
+                'incomeToday' => \App\Models\transactions::whereDate('created_at', $todayDate)
+                                    ->where('status_pembayaran', 'paid')
+                                    ->sum('total_bayar'),
+                
+                // Jumlah transaksi sukses hari ini
+                'todayTransactions' => \App\Models\transactions::whereDate('created_at', $todayDate)->count(),
+                
+                // Siswa yang perlu ditagih (Inactive)
+                'inactiveCount' => \App\Models\students::where('status', 'inactive')->count(),
+                
+                // Total Siswa Aktif
+                'activeCount' => \App\Models\students::where('status', 'active')->count(),
+            ];
 
-        $day = $dayMap[Carbon::now()->format('l')] ?? Carbon::now()->format('l');
-        $nowTime = Carbon::now()->format('H:i:s');
+            // --- 3. JADWAL HARI INI ---
+            $dayMap = [
+                'Monday' => 'Senin', 'Tuesday' => 'Selasa', 'Wednesday' => 'Rabu',
+                'Thursday' => 'Kamis', 'Friday' => 'Jumat', 'Saturday' => 'Sabtu', 'Sunday' => 'Minggu'
+            ];
+            $day = $dayMap[$todayDate->format('l')] ?? $todayDate->format('l');
+            $nowTime = $todayDate->format('H:i:s');
 
-        $schedulesQuery = DB::table('schedules as s')
-            ->leftJoin('subjects as sub', 's.subject_id', '=', 'sub.id')
-            ->leftJoin('mentors as m', 's.mentor_id', '=', 'm.id')
-            ->leftJoin('enrollment_schedules as es', 's.id', '=', 'es.schedule_id')
-            ->leftJoin('enrollments as e', 'es.enrollment_id', '=', 'e.id')
-            ->leftJoin('students as st', 'e.student_id', '=', 'st.id')
-            ->select('s.*', 'sub.mapel_name as subject_name', 'm.mentor_name as mentor_name', DB::raw('COUNT(DISTINCT st.id) as student_count'))
-            ->where('s.hari', $day)
-            ->groupBy('s.id', 'sub.mapel_name', 'm.mentor_name')
-            ->orderByRaw("CASE WHEN s.jam_mulai <= '{$nowTime}' AND s.jam_selesai >= '{$nowTime}' THEN 0 ELSE 1 END, s.jam_mulai")
-            ->get();
-
-        $schedules = $schedulesQuery->map(function ($s) {
-            $studentsList = DB::table('enrollment_schedules as es')
-                ->join('enrollments as e', 'es.enrollment_id', '=', 'e.id')
-                ->join('students as st', 'e.student_id', '=', 'st.id')
-                ->where('es.schedule_id', $s->id)
-                ->select('st.student_name')
-                ->limit(6)
+            $schedules = \DB::table('schedules as s')
+                ->leftJoin('subjects as sub', 's.subject_id', '=', 'sub.id')
+                ->leftJoin('mentors as m', 's.mentor_id', '=', 'm.id')
+                ->select('s.*', 'sub.mapel_name as subject_name', 'm.mentor_name as mentor_name', 
+                    \DB::raw('(SELECT COUNT(DISTINCT e.student_id) 
+                            FROM enrollment_schedules es 
+                            JOIN enrollments e ON es.enrollment_id = e.id 
+                            WHERE es.schedule_id = s.id) as student_count'))
+                ->where('s.hari', $day)
+                ->orderByRaw("CASE WHEN s.jam_mulai <= '{$nowTime}' AND s.jam_selesai >= '{$nowTime}' THEN 0 ELSE 1 END, s.jam_mulai")
                 ->get();
-            $s->students = $studentsList;
-            return $s;
-        });
 
-        return view('Kasir.dashboard', compact('today', 'cashierName', 'officeStatus', 'unpaidCount', 'inactiveCount', 'schedules'));
-    }
+            return view('Kasir.dashboard', array_merge([
+                'today' => $todayStr, 
+                'cashierName' => $cashierName, 
+                'schedules' => $schedules,
+                'officeStatus' => 'Open'
+            ], $data));
+        }
 }

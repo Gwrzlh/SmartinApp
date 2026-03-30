@@ -1,138 +1,199 @@
+
+@php
+    $path = public_path('asset/Smartin-removebg-preview.png'); 
+    if (file_exists($path)) {
+        $type = pathinfo($path, PATHINFO_EXTENSION);
+        $data = file_get_contents($path);
+        $base64 = 'data:image/' . $type . ';base64,' . base64_encode($data);
+    } else {
+        $base64 = null; 
+    }
+@endphp
+
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Struk Pembayaran #{{ $transaction->id }}</title>
     <style>
+        @page { margin: 0; }
         body {
-            font-family: 'Courier New', Courier, monospace; /* Font struk klasik tapi bersih */
-            font-size: 12px;
-            color: #333;
+            font-family: 'Arial', sans-serif;
+            font-size: 11px;
+            line-height: 1.4;
+            color: #000;
             margin: 0;
             padding: 0;
+            background-color: #fff;
         }
         .container {
-            width: 80mm; /* Standar Thermal Besar */
+            width: 72mm; 
             margin: auto;
-            padding: 5mm;
-            border: 1px dashed #ccc;
+            padding: 4mm;
         }
-        .header {
-            text-align: center;
-            margin-bottom: 20px;
-        }
-        .header h1 {
-            font-size: 18px;
-            margin: 0;
-            text-transform: uppercase;
-        }
-        .header p {
-            margin: 2px 0;
-            font-size: 10px;
-            color: #666;
-        }
-        .info {
-            margin-bottom: 15px;
-            border-bottom: 1px dashed #eee;
-            padding-bottom: 10px;
-        }
-        .info div {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 2px;
-        }
-        .table {
-            width: 100%;
-            margin-bottom: 15px;
-        }
-        .table tr td {
-            padding: 4px 0;
-        }
-        .totals {
-            border-top: 1px dashed #eee;
-            padding-top: 10px;
-        }
-        .totals div {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 4px;
-        }
-        .footer {
-            text-align: center;
-            margin-top: 30px;
-            font-size: 10px;
-            color: #888;
-        }
-        .barcode {
-            margin-top: 15px;
-            text-align: center;
-        }
+        
+        .text-center { text-align: center; }
         .text-right { text-align: right; }
         .font-bold { font-weight: bold; }
-        
-        /* Layout untuk PDF */
-        @page {
-            margin: 0;
+        .dashed-line {
+            border-top: 1px dashed #000;
+            margin: 8px 0;
         }
+        .header {
+            margin-bottom: 10px;
+        }
+        .logo-placeholder {
+            font-size: 30px;
+            margin-bottom: 5px;
+        }
+        .shop-name {
+            font-size: 16px;
+            font-weight: bold;
+            text-transform: capitalize;
+            margin-bottom: 2px;
+        }
+        .address {
+            font-size: 9px;
+            padding: 0 5mm;
+        }
+        .meta-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            margin-bottom: 5px;
+            font-size: 10px;
+        }
+        .item-list {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+        }
+        .item-list td {
+            vertical-align: top;
+            padding: 2px 0;
+        }
+        .qty-price {
+            font-size: 9px;
+            color: #333;
+            display: block;
+        }
+        .summary {
+            width: 100%;
+            margin-top: 5px;
+        }
+        .summary td {
+            padding: 1px 0;
+        }
+        .total-row td {
+            font-size: 13px;
+            padding: 5px 0;
+        }
+
+        .footer {
+            margin-top: 15px;
+            font-size: 10px;
+        }
+        .e-receipt {
+            font-size: 8px;
+            margin-top: 10px;
+            color: #555;
+        }
+        .logo-container {
+        display: block;
+        text-align: center;
+        margin-bottom: 5px; 
+        padding: 0;
+        height: 35px; 
+        overflow: hidden;  
+    }
+
+    .styled-logo {
+        height: 100%;
+        width: auto; 
+        -webkit-filter: grayscale(100%) brightness(0%);
+        filter: grayscale(100%) brightness(0%);
+        image-rendering: pixelated; 
+    }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1>SMARTIN APP</h1>
-            <p>Aplikasi Kursus Offline Profesional</p>
-            <p>Jln. Raya Pendidikan No. 123, Indonesia</p>
-            <p>Telp: 0812-3456-7890</p>
+       <div class="header text-center">
+            @if($base64)
+                <div class="logo-container">
+                    <img src="{{ $base64 }}" alt="Logo" class="styled-logo">
+                </div>
+            @endif
+            
+            <div class="shop-name" style="margin-top: 0; padding-top: 0;">SMARTIN</div>
+            <div class="address">
+                Jl. Arief Rahman Hakim No. 35, Subang, Kec. Subang,<br>
+                Kabupaten Subang, Jawa Barat<br>
+                #TRX-{{ $transaction->id }}
+            </div>
         </div>
 
-        <div class="info">
-            <div><strong>No. Transaksi:</strong> #TRX-{{ $transaction->id }}</div>
-            <div><strong>Tanggal:</strong> {{ \Carbon\Carbon::parse($transaction->tgl_bayar)->format('d/m/Y H:i') }}</div>
-            <div><strong>Siswa:</strong> {{ $student->student_name }} ({{ $student->student_nik }})</div>
-            <div><strong>Kasir:</strong> {{ $transaction->user->full_name ?? $transaction->user->name }}</div>
+        <div class="dashed-line"></div>
+
+        <div class="meta-grid">
+            <div>{{ \Carbon\Carbon::parse($transaction->tgl_bayar)->format('Y-m-d') }}</div>
+            <div class="text-right">{{ $transaction->user->username ?? 'Kasir' }}</div>
+            <div>{{ \Carbon\Carbon::parse($transaction->tgl_bayar)->format('H:i:s') }}</div>
+            <div class="text-right">{{ $student->student_name }}</div>
         </div>
 
-        <table class="table">
-            @foreach($transaction->details as $detail)
+        <div class="dashed-line"></div>
+
+        <table class="item-list">
+            @foreach($transaction->details as $index => $detail)
             <tr>
-                <td>
-                    {{ $detail->item_type == 'registration' ? 'Biaya Pendaftaran' : ($detail->item_type == 'spp' ? 'SPP' : 'Kursus') }} - 
-                    @if($detail->item_type == 'subject')
-                        {{ \App\Models\subjects::find($detail->item_id)->mapel_name ?? 'Item #'.$detail->item_id }}
-                    @elseif($detail->item_type == 'spp')
-                        @php $enroll = \App\Models\enrollments::with('subject')->find($detail->item_id); @endphp
-                        {{ $enroll->subject->mapel_name ?? 'Item #'.$detail->item_id }}
-                    @elseif($detail->item_type == 'bundling')
-                        {{ \App\Models\bundlings::find($detail->item_id)->bundling_name ?? 'Paket #'.$detail->item_id }}
-                    @else
-                        {{ $detail->item_id == 0 ? '' : 'Item #'.$detail->item_id }}
-                    @endif
+                <td style="width: 5%;">{{ $index + 1 }}.</td>
+                <td style="width: 60%;">
+                    <span class="font-bold">
+                        @if($detail->item_type == 'subject')
+                            {{ \App\Models\subjects::find($detail->item_id)->mapel_name ?? 'Item' }}
+                        @elseif($detail->item_type == 'spp')
+                            @php $enroll = \App\Models\enrollments::with('subject')->find($detail->item_id); @endphp
+                            SPP {{ $enroll->subject->mapel_name ?? 'Item' }}
+                        @else
+                            {{ ucfirst($detail->item_type) }}
+                        @endif
+                    </span>
+                    <span class="qty-price">1 x {{ number_format($detail->price, 0, ',', '.') }}</span>
                 </td>
-                <td class="text-right">Rp{{ number_format($detail->price, 0, ',', '.') }}</td>
+                <td class="text-right" style="width: 35%;">
+                    Rp {{ number_format($detail->price, 0, ',', '.') }}
+                </td>
             </tr>
             @endforeach
         </table>
 
-        <div class="totals">
-            <div class="font-bold">
-                <span>TOTAL:</span>
-                <span>Rp{{ number_format($transaction->total_bayar, 0, ',', '.') }}</span>
-            </div>
-            <div>
-                <span>TUNAI:</span>
-                <span>Rp{{ number_format($transaction->uang_diterima, 0, ',', '.') }}</span>
-            </div>
-            <div>
-                <span>KEMBALI:</span>
-                <span>Rp{{ number_format($transaction->uang_kembali, 0, ',', '.') }}</span>
-            </div>
-        </div>
+        <div class="dashed-line"></div>
 
-        <div class="footer">
-            <p>Terima kasih telah bergabung bersama kami!</p>
-            <p>Struk ini adalah bukti pembayaran yang sah.</p>
-            <p>&copy; {{ date('Y') }} SmartinApp Team</p>
+        <table class="summary">
+            <tr>
+                <td>Sub Total</td>
+                <td class="text-right">Rp {{ number_format($transaction->total_bayar, 0, ',', '.') }}</td>
+            </tr>
+            <tr class="total-row font-bold">
+                <td>TOTAL</td>
+                <td class="text-right">Rp {{ number_format($transaction->total_bayar, 0, ',', '.') }}</td>
+            </tr>
+            <tr>
+                <td>Bayar (Cash)</td>
+                <td class="text-right">Rp {{ number_format($transaction->uang_diterima, 0, ',', '.') }}</td>
+            </tr>
+            <tr>
+                <td>Kembali</td>
+                <td class="text-right">Rp {{ number_format($transaction->uang_kembali, 0, ',', '.') }}</td>
+            </tr>
+        </table>
+
+        <div class="dashed-line"></div>
+
+        <div class="footer text-center">
+            <p>Terima Kasih Sudah Mempercayai kami
+                <div class="e-receipt">Semoga Ilmu yang di dapat Bermanfaat</div>
+            </p>
         </div>
     </div>
 </body>

@@ -27,7 +27,7 @@
 
 <div class="min-h-screen bg-gray-50/50 p-4 sm:p-8">
     <div class="max-w-3xl mx-auto">
-        <a href="{{ route('admin.subjects.index') }}" class="inline-flex items-center text-sm text-gray-500 hover:text-cyan-600 mb-6 transition-colors group">
+        <a href="{{ route('admin.bundling.index') }}" class="inline-flex items-center text-sm text-gray-500 hover:text-cyan-600 mb-6 transition-colors group">
             <x-akar-arrow-left class="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" /> Kembali ke Manajemen Bundling    
         </a>
 
@@ -122,7 +122,7 @@
                         </div>
 
                         <div class="p-8 bg-gray-50/50 border-t border-gray-100 flex items-center justify-end space-x-4">
-                            <a href="{{ route('admin.bundling.index') }}" class="px-6 py-3 text-sm font-bold text-gray-400 hover:text-red-500 transition-colors">Batal</a>
+                            {{-- <a href="{{ route('admin.bundling.index') }}" class="px-6 py-3 text-sm font-bold text-gray-400 hover:text-red-500 transition-colors">Batal</a> --}}
                             <button type="submit" id="submitBtn" class="px-10 py-3 bg-cyan-600 hover:bg-cyan-700 text-white font-bold rounded-xl transition-all shadow-lg shadow-cyan-200 hover:shadow-cyan-300 hover:-translate-y-0.5 active:scale-95 flex items-center justify-center">
                                 <span id="submitText">Simpan Paket Bundling</span>
                             </button>

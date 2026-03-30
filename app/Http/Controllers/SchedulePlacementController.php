@@ -13,16 +13,33 @@ use Illuminate\Support\Facades\DB;
 
 class SchedulePlacementController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $schedules = schedules::with(['subject', 'mentor'])
+        $query = schedules::with(['subject', 'mentor'])
             ->withCount(['enrollments as active_students_count' => function ($query) {
-                // Must explicitly specify the pivot table alias in older Laravel versions or just rely on the pivot condition
                 $query->where('enrollment_schedules.status', 'ongoing');
-            }])
-            ->orderBy('hari')
+            }]);
+
+        // Logika Pencarian
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->whereHas('subject', function($sq) use ($search) {
+                    $sq->where('mapel_name', 'like', "%{$search}%");
+                })->orWhereHas('mentor', function($mq) use ($search) {
+                    $mq->where('mentor_name', 'like', "%{$search}%");
+                });
+            });
+        }
+
+        if ($request->filled('hari')) {
+            $query->where('hari', $request->hari);
+        }
+
+        $schedules = $query->orderBy('hari')
             ->orderBy('jam_mulai')
-            ->get();
+            ->paginate(5) 
+            ->withQueryString();
 
         return view('Kasir.SchedulesManage', compact('schedules'));
     }
@@ -89,6 +106,9 @@ class SchedulePlacementController extends Controller
             ]);
 
             DB::commit();
+
+            logActivity('Memindahkan Jadwal Siswa', 'Ke Jadwal Baru ID: ' . $targetSchedule->id);
+
             return back()->with('success', 'Siswa berhasil dipindahkan jadwalnya.');
 
         } catch (\Exception $e) {
@@ -163,6 +183,7 @@ class SchedulePlacementController extends Controller
             });
 
             // If successful
+            logActivity('Menyimpan Penempatan Jadwal Siswa');
             return redirect()->route('kasir.transaction')->with('success', 'Jadwal siswa berhasil disimpan dan dikunci!');
 
         } catch (\Exception $e) {

@@ -16,12 +16,12 @@ class transaction_details extends Model
 
     public function enrollment()
     {
-        // Jika item_type adalah subject/spp, dia mengambil dari item_id (belongsTo)
-        if ($this->item_type == 'subject' || $this->item_type == 'spp') {
+        // Jika SPP, item_id adalah ID Enrollment (belongsTo)
+        if ($this->item_type == 'spp') {
             return $this->belongsTo(enrollments::class, 'item_id');
         }
         
-        // Jika pendaftaran baru, dia mencari yang transaction_detail_id-nya sama (hasOne)
+        // Untuk subject/bundling/registrasi, link-nya via transaction_detail_id
         return $this->hasOne(enrollments::class, 'transaction_detail_id');
     }
 }
