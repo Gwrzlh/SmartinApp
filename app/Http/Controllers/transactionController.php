@@ -63,6 +63,7 @@ class transactionController extends Controller
             $enrollmentsToSchedule = enrollments::with(['subject.schedules.mentor'])
                 ->whereIn('transaction_detail_id', $detailIds)
                 ->where('item_type', 'subject')
+                ->doesntHave('enrollmentSchedule')
                 ->get();
 
             if ($enrollmentsToSchedule->isNotEmpty()) {
@@ -356,8 +357,10 @@ class transactionController extends Controller
 
             logActivity('Melakukan Transaksi Pembayaran', 'ID Transaksi: ' . $transaction->id . ' sebesar Rp.' . number_format($total, 0, ',', '.'));
             session()->forget(['cart', 'selected_student']);
-            return redirect()->route('kasir.transaction', ['print_invoice' => $transaction->id])
-                ->with('success', 'Transaksi berhasil! Struk sedang dicetak.');
+            return redirect()->route('kasir.transaction', [
+                'transaction_id' => $transaction->id,
+                'print_invoice' => $transaction->id
+            ])->with('success', 'Transaksi berhasil! Struk sedang dicetak.');
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->with('error','Checkout gagal : '.$e->getMessage());

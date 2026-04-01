@@ -128,6 +128,17 @@
                             {{ $trx->user->full_name ?? 'N/A' }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-center text-sm flex justify-center gap-2">
+                            @php
+                                $hasUnscheduled = \App\Models\enrollments::whereHas('transaction_detail', function($q) use ($trx) {
+                                    $q->where('transaction_id', $trx->id);
+                                })->where('item_type','subject')->doesntHave('enrollmentSchedule')->exists();
+                            @endphp
+                            @if($hasUnscheduled)
+                                <a href="{{ route('kasir.transaction', ['transaction_id' => $trx->id]) }}" 
+                                   class="p-2 text-amber-500 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors border border-amber-200 shadow-sm flex items-center justify-center animate-pulse" title="Atur Jadwal yang Tertinggal">
+                                    <x-akar-calendar class="w-4 h-4"/>
+                                </a>
+                            @endif
                             <button type="button" onclick="openDetailTrxModal({{ $trx->id }})" class="p-2 text-gray-500 bg-gray-50 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors border border-gray-200 shadow-sm flex items-center justify-center" title="Detail Transaksi">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
                             </button>

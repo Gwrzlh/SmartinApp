@@ -33,8 +33,8 @@
             </div>
              <div>
                 <label class="text-sm text-gray-600">Alamat</label>
-                <input type="text" name="student_address" id="edit_address"
-                class="w-full border rounded-lg px-3 py-2">
+                <textarea name="student_address" id="edit_address" rows="3"
+                class="w-full border rounded-lg px-3 py-2 resize-y"></textarea>
             </div>
             <div>
                 <label class="text-sm text-gray-600">Gender</label>

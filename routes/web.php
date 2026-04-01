@@ -64,7 +64,7 @@ Route::middleware('auth')->group(function () {
             ->name('owner.users.toggleStatus');
         Route::post('owner/users/create', [UserController::class, 'store'])
             ->name('owner.users.store');
-        Route::post('owner/users/{user}/update', [UserController::class, 'update'])
+        Route::put('owner/users/{user}/update', [UserController::class, 'update'])
             ->name('owner.users.update');
         Route::get('owner/log-activity', [OwnerController::class, 'logActivity'])
             ->name('owner.logActivity');

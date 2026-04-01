@@ -28,7 +28,7 @@
         <!-- Modal Body -->
         <form :action="'{{ route('owner.users.update', ['user' => ':id']) }}'.replace(':id', editingUser.id)" method="POST" class="p-8 space-y-5">
             @csrf
-            @method('PUT')
+            {{-- @method('PUT') --}}
             <div class="space-y-4">
                 <!-- Full Name -->
                 <div>
