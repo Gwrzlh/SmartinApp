@@ -46,6 +46,8 @@ Route::middleware('auth')->group(function () {
         Route::resource('mentor', mentorController::class);
         Route::resource('bundling', bundlingController::class);
         Route::resource('schedules', scheduleController::class);
+        Route::get('get-subjects-by-bundling/{bundlingId}', [scheduleController::class, 'getSubjectsByBundling'])->name('getSubjectsByBundling');
+    Route::get('get-mentors-by-subject/{subjectId}', [scheduleController::class, 'getMentorsBySubject'])->name('getMentorsBySubject');
         Route::get('get-subjects/{mentorId}', [scheduleController::class, 'getSubjectsByMentor'])->name('getSubjects');
     });
 

@@ -17,6 +17,7 @@ return new class extends Migration
             $table->enum('gender', ['Laki-Laki', 'Perempuan']);
             $table->string('phone_number');
             $table->foreignId('specialization_id')->constrained('subjects')->cascadeOnDelete();
+            $table->boolean('is_active')->default(1);
             $table->timestamps();
         });
     }

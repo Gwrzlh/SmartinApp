@@ -19,6 +19,8 @@ return new class extends Migration
             $table->time('jam_mulai');
             $table->time('jam_selesai');
             $table->string('ruangan');
+            $table->foreignId('bundling_id')->nullable()->constrained('bundlings')->cascadeOnDelete();
+            $table->boolean('is_active')->default(1);
             $table->timestamps();
         });
     }

@@ -15,45 +15,66 @@ class SchedulePlacementController extends Controller
 {
     public function index(Request $request)
     {
-        $query = schedules::with(['subject', 'mentor'])
-            ->withCount(['enrollments as active_students_count' => function ($query) {
-                $query->where('enrollment_schedules.status', 'ongoing');
-            }]);
+        $query = \App\Models\bundlings::query();
 
-        // Logika Pencarian
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->where(function($q) use ($search) {
-                $q->whereHas('subject', function($sq) use ($search) {
-                    $sq->where('mapel_name', 'like', "%{$search}%");
-                })->orWhereHas('mentor', function($mq) use ($search) {
-                    $mq->where('mentor_name', 'like', "%{$search}%");
-                });
-            });
+            $query->where('bundling_name', 'like', "%{$search}%");
         }
 
-        if ($request->filled('hari')) {
-            $query->where('hari', $request->hari);
+        if ($request->filled('status')) {
+            $status = $request->status;
+            if ($status == 'active') {
+                $query->where('is_active', 1);
+            } elseif ($status == 'inactive') {
+                $query->where('is_active', 0);
+            }
         }
 
-        $schedules = $query->orderBy('hari')
-            ->orderBy('jam_mulai')
+        $programs = $query->latest()
             ->paginate(5) 
             ->withQueryString();
 
-        return view('Kasir.SchedulesManage', compact('schedules'));
+        foreach ($programs as $bundle) {
+            $enrolledCount = \App\Models\enrollments::where('item_type', 'bundling')
+                ->where('item_id', $bundle->id)
+                ->where('status_pembelajaran', '!=', 'inactive')
+                ->count();
+            
+            $bundle->active_students_count = $enrolledCount;
+            
+            $start = \Carbon\Carbon::parse($bundle->start_date);
+            $end = $start->copy()->addMonths($bundle->duration_mounths);
+            
+            if ($start->isFuture()) {
+                $bundle->program_status = 'Belum Mulai';
+            } elseif (now()->greaterThanOrEqualTo($end)) {
+                $bundle->program_status = 'Selesai';
+            } else {
+                $bundle->program_status = 'Berjalan';
+            }
+        }
+
+        return view('Kasir.SchedulesManage', compact('programs'));
     }
 
     public function show($id)
     {
-        $schedule = schedules::with(['subject', 'mentor'])->findOrFail($id);
+        $program = \App\Models\bundlings::with('details.subject')->findOrFail($id);
         
-        $enrollmentSchedules = EnrollmentSchedule::with(['enrollment.student'])
-            ->where('schedule_id', $id)
-            ->where('status', 'ongoing')
+        $schedules = \App\Models\schedules::with(['subject', 'mentor'])
+            ->where('bundling_id', $id)
+            ->orderBy('hari')
+            ->orderBy('jam_mulai')
             ->get();
 
-        return view('Kasir.schedules.show', compact('schedule', 'enrollmentSchedules'));
+        $enrollments = \App\Models\enrollments::with('student')
+            ->where('item_type', 'bundling')
+            ->where('item_id', $id)
+            ->latest()
+            ->get();
+
+        return view('Kasir.schedules.show', compact('program', 'schedules', 'enrollments'));
     }
 
     public function getAvailableSchedules(Request $request, $subject_id)

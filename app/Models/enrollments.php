@@ -7,11 +7,16 @@ use Illuminate\Database\Eloquent\Model;
 class enrollments extends Model
 {
     protected $table = 'enrollments';
-    protected $fillable = ['student_id','transaction_detail_id','item_type','item_id','tgl_daftar','status_pembelajaran','expired_at'];
+    protected $fillable = ['student_id','transaction_detail_id','item_type','item_id','tgl_daftar','status_pembelajaran','expired_at', 'finish_at'];
 
     public function subject()
     {
         return $this->belongsTo(subjects::class, 'item_id');
+    }
+
+    public function bundling()
+    {
+        return $this->belongsTo(bundlings::class, 'item_id');
     }
 
     public function enrollmentSchedule()

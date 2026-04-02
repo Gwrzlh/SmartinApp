@@ -25,7 +25,7 @@
                 <form action="{{ route('admin.schedules.index') }}" method="GET" class="flex flex-col sm:flex-row gap-3">
                     <div class="relative group">
                         <input type="text" name="search" value="{{ request('search') }}"
-                            placeholder="Cari Mapel atau Mentor..." 
+                            placeholder="Cari Bundling, Mapel atau Mentor..." 
                             class="pl-10 pr-4 py-2 w-full sm:w-64 rounded-xl border-2 border-gray-100 bg-white focus:border-cyan-500 focus:ring-4 focus:ring-cyan-500/10 outline-none transition-all text-sm">
                         
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -57,7 +57,7 @@
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mapel & Mentor</th>
                         <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Waktu</th>
                         <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Ruangan</th>
-                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Slot Terisi</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Bundling</th>
                         <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                         <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
                     </tr>
@@ -78,17 +78,9 @@
                                 <span class="px-2 py-1 bg-gray-100 rounded-md">{{ $schedule->ruangan }}</span>
                             </td>
                             <td class="px-6 py-4 text-center">
-                                @php
-                                    $terisi = $schedule->enrollments_count ?? 0;
-                                    $persen = ($terisi / $schedule->capacity) * 100;
-                                    $color = $persen >= 100 ? 'text-red-600' : ($persen >= 80 ? 'text-orange-500' : 'text-green-600');
-                                @endphp
-                                <div class="text-sm font-bold {{ $color }}">
-                                    {{ $terisi }} / {{ $schedule->capacity }}
-                                </div>
-                                <div class="w-full bg-gray-200 rounded-full h-1 mt-1">
-                                    <div class="h-1 rounded-full bg-cyan-500" style="width: {{ $persen }}%"></div>
-                                </div>
+                                <span class="px-3 py-1 bg-amber-50 text-amber-700 border border-amber-100 rounded-full text-xs font-bold shadow-sm">
+                                    {{ $schedule->bundling->bundling_name ?? 'Reguler/Lainnya' }}
+                                </span>
                             </td>
                             <td class="px-6 py-4 text-center">
                                 <span class="px-2 py-1 text-xs font-semibold rounded-full {{ $schedule->is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
@@ -156,6 +148,7 @@
                 document.getElementById('modalUserRole').textContent = 'Mentor: ' + data.mentor_name;
 
                 // Update Isi Grid Modal
+                // Cari bagian ini di fungsi ShowScheduleDetails dan hapus bagian kapasitas
                 document.getElementById('modalGridBody').innerHTML = `
                     <div class="space-y-1">
                         <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Hari & Waktu</p>
@@ -166,8 +159,10 @@
                         <p class="text-sm font-semibold text-gray-700">${data.ruangan}</p>
                     </div>
                     <div class="space-y-1">
-                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Kapasitas</p>
-                        <p class="text-sm font-semibold text-gray-700">${data.capacity} Siswa</p>
+                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Bundling</p>
+                        <p class="text-sm font-semibold text-gray-700">
+                            <span class="px-2 py-1 bg-amber-50 text-amber-700 rounded-md border border-amber-100">${data.bundling_name}</span>
+                        </p>
                     </div>
                     <div class="space-y-1">
                         <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Dibuat Pada</p>

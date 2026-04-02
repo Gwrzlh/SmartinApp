@@ -24,22 +24,31 @@
                     @csrf
                     @method('PUT')
 
-                   <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                   <div class="grid grid-cols-1 gap-6">
                         <div class="space-y-2">
-                            <label class="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Mentor Pengajar</label>
-                            <select name="mentor_id" id="mentor_select" class="block w-full px-4 py-3 rounded-xl border-2 border-gray-100 focus:border-amber-500 outline-none">
-                                <option value="" disabled>Pilih Mentor...</option>
-                                @foreach($mentors as $mentor)
-                                    <option value="{{ $mentor->id }}" {{ old('mentor_id', $schedule->mentor_id) == $mentor->id ? 'selected' : '' }}>{{ $mentor->mentor_name }}</option>
+                            <label class="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Pilih Paket (Bundling)</label>
+                            <select name="bundling_id" id="bundling_select" class="block w-full px-4 py-3 rounded-xl border-2 border-gray-100 focus:border-amber-500 outline-none">
+                                <option value="" disabled>Pilih Paket Bundling...</option>
+                                @foreach($bundlings as $bundle)
+                                    <option value="{{ $bundle->id }}" {{ old('bundling_id', $bundling_id) == $bundle->id ? 'selected' : '' }}>{{ $bundle->bundling_name }}</option>
                                 @endforeach
                             </select>
                         </div>
 
-                        <div class="space-y-2">
-                            <label class="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Mata Pelajaran</label>
-                            <select name="subject_id" id="subject_select" class="block w-full px-4 py-3 rounded-xl border-2 border-gray-100 focus:border-amber-500 outline-none" disabled>
-                                <option value="" disabled selected>Pilih Mentor lebih dulu...</option>
-                            </select>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="space-y-2">
+                                <label class="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Mata Pelajaran</label>
+                                <select name="subject_id" id="subject_select" class="block w-full px-4 py-3 rounded-xl border-2 border-gray-100 focus:border-amber-500 outline-none" disabled>
+                                    <option value="" disabled selected>Pilih Bundling lebih dulu...</option>
+                                </select>
+                            </div>
+
+                            <div class="space-y-2">
+                                <label class="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Mentor Pengajar</label>
+                                <select name="mentor_id" id="mentor_select" class="block w-full px-4 py-3 rounded-xl border-2 border-gray-100 focus:border-amber-500 outline-none" disabled>
+                                    <option value="" disabled selected>Pilih Mapel lebih dulu...</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
                         <div class="space-y-2">
@@ -51,10 +60,10 @@
                             </select>
                         </div>
 
-                        <div class="space-y-2">
+                        {{-- <div class="space-y-2">
                             <label class="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Kapasitas (Slot Siswa)</label>
                             <input type="number" name="capacity" value="{{ old('capacity', $schedule->capacity) }}" min="1" class="block w-full px-4 py-3 rounded-xl border-2 border-gray-100 focus:border-amber-500 outline-none">
-                        </div>
+                        </div> --}}
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -85,58 +94,68 @@
 </div>
 
 <script>
-    document.getElementById('mentor_select').addEventListener('change', function() {
-        const mentorId = this.value;
-        const subjectSelect = document.getElementById('subject_select');
-        const oldSubjectId = "{{ old('subject_id', $schedule->subject_id) }}";
+    const bundlingSelect = document.getElementById('bundling_select');
+    const subjectSelect = document.getElementById('subject_select');
+    const mentorSelect = document.getElementById('mentor_select');
 
-        // reset dropdown while loading
-        subjectSelect.innerHTML = '<option value="" disabled selected>Loading...</option>';
+    const oldSubjectId = "{{ old('subject_id', $schedule->subject_id) }}";
+    const oldMentorId = "{{ old('mentor_id', $schedule->mentor_id) }}";
+
+    // 1. Bundling Change -> Load Subjects
+    bundlingSelect.addEventListener('change', function() {
+        const bundlingId = this.value;
+        subjectSelect.innerHTML = '<option value="" disabled selected>Loading Mapel...</option>';
         subjectSelect.disabled = true;
+        mentorSelect.innerHTML = '<option value="" disabled selected>Pilih Mapel lebih dulu...</option>';
+        mentorSelect.disabled = true;
 
-        if (mentorId) {
-            let url = "{{ route('admin.getSubjects', ':id') }}";
-            url = url.replace(':id', mentorId);
+        if (!bundlingId) return;
 
-            fetch(url)
-                .then(response => response.json())
-                .then(data => {
-                    subjectSelect.innerHTML = '<option value="" disabled selected>Pilih Mapel...</option>';
-
-                    if (data.length > 0) {
-                        data.forEach(subject => {
-                            const option = document.createElement('option');
-                            option.value = subject.id;
-                            option.textContent = subject.mapel_name;
-                            if (oldSubjectId && oldSubjectId == subject.id) {
-                                option.selected = true;
-                            }
-                            subjectSelect.appendChild(option);
-                        });
-                        subjectSelect.disabled = false;
-                    } else {
-                        subjectSelect.innerHTML = '<option value="" disabled selected>Mentor tidak punya mapel</option>';
+        fetch(`/admin/get-subjects-by-bundling/${bundlingId}`)
+            .then(res => res.json())
+            .then(data => {
+                subjectSelect.innerHTML = '<option value="" disabled selected>Pilih Mapel...</option>';
+                data.forEach(sub => {
+                    let option = new Option(sub.mapel_name, sub.id);
+                    if (oldSubjectId && oldSubjectId == sub.id) {
+                        option.selected = true;
                     }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    subjectSelect.innerHTML = '<option value="" disabled selected>Gagal memuat data</option>';
+                    subjectSelect.add(option);
                 });
-        } else {
-            // no mentor selected, reset dropdown
-            subjectSelect.innerHTML = '<option value="" disabled selected>Pilih Mentor lebih dulu...</option>';
-        }
+                subjectSelect.disabled = false;
+                
+                if (subjectSelect.value) {
+                    subjectSelect.dispatchEvent(new Event('change'));
+                }
+            });
     });
 
-    // if the form was loaded for editing (or reloaded due to validation), trigger population of the subjects
+    // 2. Subject Change -> Load Mentors
+    subjectSelect.addEventListener('change', function() {
+        const subjectId = this.value;
+        mentorSelect.innerHTML = '<option value="" disabled selected>Loading Mentor...</option>';
+        mentorSelect.disabled = true;
+        
+        if (!subjectId) return;
+
+        fetch(`/admin/get-mentors-by-subject/${subjectId}`)
+            .then(res => res.json())
+            .then(data => {
+                mentorSelect.innerHTML = '<option value="" disabled selected>Pilih Mentor...</option>';
+                data.forEach(men => {
+                    let option = new Option(men.mentor_name, men.id);
+                    if (oldMentorId && oldMentorId == men.id) {
+                        option.selected = true;
+                    }
+                    mentorSelect.add(option);
+                });
+                mentorSelect.disabled = false;
+            });
+    });
+
     document.addEventListener('DOMContentLoaded', function() {
-        const mentorSelect = document.getElementById('mentor_select');
-        // ensure mentor_select has the existing schedule value if not already set by Blade
-        if (mentorSelect && !mentorSelect.value) {
-            mentorSelect.value = "{{ old('mentor_id', $schedule->mentor_id) }}";
-        }
-        if (mentorSelect && mentorSelect.value) {
-            mentorSelect.dispatchEvent(new Event('change'));
+        if (bundlingSelect.value) {
+            bundlingSelect.dispatchEvent(new Event('change'));
         }
     });
 

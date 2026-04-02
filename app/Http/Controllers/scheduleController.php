@@ -7,6 +7,7 @@ use App\Models\schedules;
 use App\Models\subjects;
 use App\Models\students;
 use App\Models\mentors;
+use App\Models\bundlings;
 
 class scheduleController extends Controller
 {
@@ -14,16 +15,20 @@ class scheduleController extends Controller
     {
         $subjects = subjects::all(); // Tetap ambil untuk keperluan lain jika perlu
 
-        $schedules = schedules::with(['subject', 'mentor'])
+        $schedules = schedules::with(['subject', 'mentor', 'bundling'])
             ->withCount('enrollments') 
-            ->when($request->search, function ($query) use ($request) {
-                $search = $request->search;
-                return $query->whereHas('subject', function($q) use ($search) {
-                    $q->where('mapel_name', 'like', "%{$search}%");
-                })->orWhereHas('mentor', function($q) use ($search) {
-                    $q->where('mentor_name', 'like', "%{$search}%");
-                });
-            })
+                ->when($request->search, function ($query) use ($request) {
+                    $search = $request->search;
+                    return $query->where(function($mainQuery) use ($search) {
+                        $mainQuery->whereHas('subject', function($q) use ($search) {
+                            $q->where('mapel_name', 'like', "%{$search}%");
+                        })->orWhereHas('mentor', function($q) use ($search) {
+                            $q->where('mentor_name', 'like', "%{$search}%");
+                        })->orWhereHas('bundling', function($q) use ($search) {
+                            $q->where('bundling_name', 'like', "%{$search}%");
+                        });
+                    });
+                })
             ->latest()
             ->paginate(5);
 
@@ -32,9 +37,9 @@ class scheduleController extends Controller
 
     public function create()
     {
-        $subjects = subjects::all();
-        $mentors = mentors::where('is_active', true)->get();
-        return view('Admin.schedules.create', compact('subjects', 'mentors'));
+        // Pastikan kirim data bundling ke view
+        $bundlings = \App\Models\bundlings::where('is_active', true)->get();
+        return view('Admin.schedules.create', compact('bundlings'));
     }
 
     public function store(Request $request)
@@ -46,7 +51,7 @@ class scheduleController extends Controller
             'jam_mulai' => 'required',
             'jam_selesai' => 'required|after:jam_mulai',
             'ruangan' => 'required',
-            'capacity' => 'required|integer|min:1',
+            // 'capacity' => 'required|integer|min:1',
         ]);
 
         // Cek Bentrok Mentor (Mentor tidak boleh mengajar di jam yang sama)
@@ -72,9 +77,14 @@ class scheduleController extends Controller
     public function edit($id)
     {
         $schedule = schedules::findOrFail($id);
-        $mentors = mentors::where('is_active', true)->get();
-        // subjects are loaded via AJAX, no need to send all here
-        return view('Admin.schedules.update', compact('schedule', 'mentors'));
+        $bundlings = \App\Models\bundlings::where('is_active', true)->get();
+        
+        $selected_bundling = \App\Models\bundlings::whereHas('subjects', function($q) use ($schedule) {
+            $q->where('subjects.id', $schedule->subject_id);
+        })->first();
+        $bundling_id = $selected_bundling ? $selected_bundling->id : null;
+
+        return view('Admin.schedules.update', compact('schedule', 'bundlings', 'bundling_id'));
     }
 
     public function update(Request $request, $id)
@@ -87,7 +97,7 @@ class scheduleController extends Controller
             'jam_mulai' => 'required',
             'jam_selesai' => 'required|after:jam_mulai',
             'ruangan' => 'required',
-            'capacity' => 'required|integer|min:1',
+            // 'capacity' => 'required|integer|min:1',
         ]);
 
         // check conflict excluding the current schedule
@@ -122,18 +132,18 @@ class scheduleController extends Controller
     }
     public function show($id)
     {
-        $schedule = schedules::with(['subject', 'mentor'])->findOrFail($id);
+        $schedule = schedules::with(['subject', 'mentor', 'bundling'])->findOrFail($id);
 
         if (request()->ajax()) {
             return response()->json([
-                'mentor_name' => $schedule->mentor->mentor_name ?? 'N/A',
-                'subject_name' => $schedule->subject->mapel_name ?? 'N/A',
-                'hari'         => $schedule->hari,
-                'jam'          => $schedule->jam_mulai . ' - ' . $schedule->jam_selesai,
-                'ruangan'      => $schedule->ruangan,
-                'capacity'     => $schedule->capacity,
-                'created_at'   => $schedule->created_at,
-                'updated_at'   => $schedule->updated_at,
+                'mentor_name'   => $schedule->mentor->mentor_name ?? 'N/A',
+                'subject_name'  => $schedule->subject->mapel_name ?? 'N/A',
+                'bundling_name' => $schedule->bundling->bundling_name ?? 'Reguler/Lainnya',
+                'hari'          => $schedule->hari,
+                'jam'           => $schedule->jam_mulai . ' - ' . $schedule->jam_selesai,
+                'ruangan'       => $schedule->ruangan,
+                'created_at'    => $schedule->created_at,
+                'updated_at'    => $schedule->updated_at,
             ]);
         }
 
@@ -158,4 +168,29 @@ class scheduleController extends Controller
             return back()->with('error', 'Gagal menghapus jadwal: ' + $e->getMessage());
         }
     }
+   public function getSubjectsByBundling($bundlingId)
+{
+    // $bundling = bundlings::with('subjects')->find($bundlingId);
+    $bundling = bundlings::where('id', $bundlingId)->first();
+    
+    if (!$bundling) {
+        return response()->json([]); // Kembalikan array kosong jika tidak ketemu
+    }
+
+    // Ambil hanya array subjects-nya saja
+    return response()->json($bundling->subjects); 
+}
+
+public function getMentorsBySubject($subjectId)
+{
+    // $subject = \App\Models\subjects::with('mentors')->find($subjectId);
+    $subject = subjects::where('id', $subjectId)->first();  
+
+    if (!$subject) {
+        return response()->json([]); 
+    }
+
+    // Ambil hanya array mentors-nya saja
+    return response()->json($subject->mentors);
+}
 }

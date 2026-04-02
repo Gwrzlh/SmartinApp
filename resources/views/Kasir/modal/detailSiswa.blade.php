@@ -82,10 +82,10 @@
                     </div>
                 </div>
 
-                <!-- Program Aktif Section -->
+                <!-- Riwayat Program Section -->
                 <div>
-                    <h4 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-4">Program & Kursus Aktif</h4>
-                    <div id="profile_enrollments" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <h4 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-4">Riwayat Program Akademik</h4>
+                    <div id="profile_enrollments" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <!-- Dynamic Enrollments -->
                         <div class="p-4 rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-between group hover:border-cyan-200 hover:bg-cyan-50/30 transition-all">
                             <div class="flex items-center gap-3">
@@ -127,11 +127,11 @@ function openProfileModal(studentId) {
     document.getElementById('profile_nik').innerText = 'NIK: ' + student.student_nik;
     
     const badge = document.getElementById('profile_status_badge');
-    badge.innerText = student.status;
+    badge.innerText = student.status === 'active' ? 'ACTIVE' : 'NON-ACTIVE';
     if (student.status === 'active') {
-        badge.className = 'mt-2 px-3 py-1 inline-flex text-xs font-bold rounded-full uppercase tracking-widest bg-green-100 text-green-700';
+        badge.className = 'mt-2 px-3 py-1 inline-flex text-xs font-bold rounded-full uppercase tracking-widest bg-emerald-100 text-emerald-700 border border-emerald-200';
     } else {
-        badge.className = 'mt-2 px-3 py-1 inline-flex text-xs font-bold rounded-full uppercase tracking-widest bg-gray-100 text-gray-600';
+        badge.className = 'mt-2 px-3 py-1 inline-flex text-xs font-bold rounded-full uppercase tracking-widest bg-gray-100 text-gray-600 border border-gray-200';
     }
 
     // Contact & Personal
@@ -153,31 +153,62 @@ function openProfileModal(studentId) {
     const enrollList = document.getElementById('profile_enrollments');
     enrollList.innerHTML = '';
     
-    const activeEnrollments = (student.enrollments || []).filter(e => e.status_pembelajaran === 'active');
+    const allEnrollments = student.enrollments || [];
     
-    if (activeEnrollments.length > 0) {
-        activeEnrollments.forEach(enroll => {
-            const mapelName = enroll.subject ? enroll.subject.mapel_name : 'Program';
+    if (allEnrollments.length > 0) {
+        allEnrollments.forEach(enroll => {
+            let programName = '-';
+            if(enroll.item_type === 'bundling' && enroll.bundling) {
+                programName = enroll.bundling.bundling_name;
+            } else if(enroll.subject) {
+                programName = enroll.subject.mapel_name;
+            }
+            
             const expDate = enroll.expired_at ? new Date(enroll.expired_at).toLocaleDateString('id-ID', {
                 day: '2-digit', month: 'short', year: 'numeric'
             }) : '-';
+
+            let statusBadge = '';
+            let borderHover = 'hover:border-gray-300 hover:bg-gray-50';
+            
+            if (enroll.status_pembelajaran === 'Lulus') {
+                statusBadge = '<span class="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-[10px] font-bold uppercase tracking-wider">LULUS</span>';
+                borderHover = 'hover:border-blue-300 hover:bg-blue-50/50';
+            } else if (enroll.status_pembelajaran === 'active') {
+                const now = new Date();
+                const exp = new Date(enroll.expired_at);
+                if (exp < now) {
+                    statusBadge = '<span class="px-2 py-0.5 bg-rose-100 text-rose-700 rounded text-[10px] font-bold uppercase tracking-wider">MENUNGGAK</span>';
+                    borderHover = 'hover:border-rose-300 hover:bg-rose-50/50';
+                } else {
+                    statusBadge = '<span class="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded text-[10px] font-bold uppercase tracking-wider">AKTIF</span>';
+                    borderHover = 'hover:border-emerald-300 hover:bg-emerald-50/50';
+                }
+            } else {
+                statusBadge = '<span class="px-2 py-0.5 bg-gray-200 text-gray-700 rounded text-[10px] font-bold uppercase tracking-wider">' + enroll.status_pembelajaran + '</span>';
+            }
             
             enrollList.innerHTML += `
-                <div class="p-4 rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-between group hover:border-cyan-200 hover:bg-cyan-50/30 transition-all">
-                    <div class="flex items-center gap-3">
-                        <div class="p-2 bg-white rounded-xl shadow-sm group-hover:text-cyan-600 transition-colors">
-                            <x-akar-book class="w-5 h-5"/>
+                <div class="p-4 rounded-2xl bg-white border border-gray-200 flex flex-col gap-3 group transition-all ${borderHover}">
+                    <div class="flex items-start justify-between gap-2">
+                        <div class="flex items-center gap-3">
+                            <div class="p-2 bg-gray-50 rounded-xl shadow-sm text-gray-500 transition-colors">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5z"></path></svg>
+                            </div>
+                            <div>
+                                <p class="text-sm font-bold text-gray-800 leading-tight">${programName}</p>
+                            </div>
                         </div>
-                        <div>
-                            <p class="text-sm font-bold text-gray-700">${mapelName}</p>
-                            <p class="text-[10px] text-gray-400 font-black uppercase tracking-tighter">Sampai: ${expDate}</p>
-                        </div>
+                        ${statusBadge}
+                    </div>
+                    <div class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1 border-t border-gray-50 pt-2">
+                        BATAS SPP: <span class="text-gray-600">${expDate}</span>
                     </div>
                 </div>
             `;
         });
     } else {
-        enrollList.innerHTML = '<p class="text-sm text-gray-400 italic">Belum ada program aktif</p>';
+        enrollList.innerHTML = '<p class="text-sm text-gray-400 italic">Belum ada riwayat akademik.</p>';
     }
 
     // Show Modal

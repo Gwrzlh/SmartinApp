@@ -116,6 +116,34 @@
                                         <p class="text-xs font-medium">Belum ada mata pelajaran yang terpilih</p>
                                     </div>
                                 </div>
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 border-t border-gray-50">
+                                <div class="space-y-2">
+                                    <label for="duration_months" class="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Durasi (Bulan)</label>
+                                    <div class="relative">
+                                        <input type="number" name="duration_months" id="duration_months" min="1"
+                                            class="block w-full px-4 py-3 rounded-xl border-2 border-gray-100 bg-gray-50/50 text-gray-700 transition-all focus:bg-white focus:border-cyan-500 outline-none"
+                                            required value="{{ old('duration_months', $bundling->duration_mounths) }}">
+                                        <span class="absolute inset-y-0 right-4 flex items-center text-gray-400 text-sm italic">Bulan</span>
+                                    </div>
+                                </div>
+
+                                <div class="space-y-2">
+                                    <label for="start_date" class="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Tanggal Mulai</label>
+                                    <input type="date" name="start_date" id="start_date" 
+                                        class="block w-full px-4 py-3 rounded-xl border-2 border-gray-100 bg-gray-50/50 text-gray-700 transition-all focus:bg-white focus:border-cyan-500 outline-none"
+                                        required value="{{ old('start_date', $bundling->start_date) }}">
+                                </div>
+
+                                <div class="space-y-2">
+                                    <label for="capacity" class="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Kapasitas (Slot)</label>
+                                    <div class="relative">
+                                        <input type="number" name="capacity" id="capacity" min="1"
+                                            class="block w-full px-4 py-3 rounded-xl border-2 border-gray-100 bg-gray-50/50 text-gray-700 transition-all focus:bg-white focus:border-cyan-500 outline-none"
+                                            required value="{{ old('capacity', $bundling->capacity) }}">
+                                        <span class="absolute inset-y-0 right-4 flex items-center text-gray-400 text-sm italic">Siswa</span>
+                                    </div>
+                                </div>
+                            </div>
 
                                 <div id="hiddenInputsContainer"></div>
                             </div>

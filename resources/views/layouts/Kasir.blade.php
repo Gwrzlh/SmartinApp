@@ -47,7 +47,7 @@
                             ],
                             [
                                 'icon' => 'akar-calendar', 
-                                'label' => 'Schedules', 
+                                'label' => 'Program', 
                                 'href' => route('kasir.schedules.index'), 
                                 'active_pattern' => 'kasir.schedules.*',
                                 'style_active' => 'bg-amber-50 text-amber-600',

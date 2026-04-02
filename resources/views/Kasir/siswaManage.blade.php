@@ -48,7 +48,7 @@
                     <tr class="bg-gray-50 border-b text-gray-600 text-xs uppercase tracking-wider">
                         <th class="px-6 py-4 font-bold">Identitas Siswa</th>
                         <th class="px-6 py-4 font-bold text-center">Kontak & Email</th>
-                        <th class="px-6 py-4 font-bold">Program Aktif</th>
+                        <th class="px-6 py-4 font-bold">Program Diambil</th>
                         <th class="px-6 py-4 font-bold text-center">Status</th>
                         <th class="px-6 py-4 font-bold text-center">Aksi</th>
                     </tr>
@@ -72,20 +72,43 @@
                             <div class="text-xs text-gray-400">{{ $siswa->email }}</div>
                         </td>
                         <td class="px-6 py-4">
-                            @php $enrollments = $siswa->enrollments->where('status_pembelajaran', 'active'); @endphp
+                            @php $enrollments = $siswa->enrollments; @endphp
                             <div class="flex flex-wrap gap-1">
                                 @forelse($enrollments as $enrollment)
-                                    <span class="inline-flex items-center px-2 py-0.5 bg-blue-50 text-blue-700 rounded-md text-[10px] font-bold border border-blue-100">
-                                        {{ $enrollment->subject->mapel_name ?? 'Product' }}
+                                    @php
+                                        $programName = '-';
+                                        if($enrollment->item_type == 'bundling') {
+                                            $programName = $enrollment->bundling->bundling_name ?? 'Program';
+                                        } else {
+                                            $programName = $enrollment->subject->mapel_name ?? 'Program';
+                                        }
+
+                                        $badgeColor = 'bg-gray-50 text-gray-700 border-gray-200';
+                                        $statusText = '';
+                                        
+                                        if($enrollment->status_pembelajaran == 'Lulus') {
+                                            $badgeColor = 'bg-blue-50 text-blue-700 border-blue-200';
+                                            $statusText = ' (Lulus)';
+                                        } elseif($enrollment->status_pembelajaran == 'active') {
+                                            if(\Carbon\Carbon::parse($enrollment->expired_at)->isBefore(now())) {
+                                                $badgeColor = 'bg-rose-50 text-rose-700 border-rose-200';
+                                                $statusText = ' (Menunggak)';
+                                            } else {
+                                                $badgeColor = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+                                            }
+                                        }
+                                    @endphp
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold border {{ $badgeColor }}">
+                                        {{ $programName }}{{ $statusText }}
                                     </span>
                                 @empty
-                                    <span class="text-xs text-gray-400 italic">Tidak ada kursus aktif</span>
+                                    <span class="text-xs text-gray-400 italic">Belum ada program</span>
                                 @endforelse
                             </div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-center">
                             <span class="px-2.5 py-1 inline-flex text-[10px] leading-4 font-bold rounded-full border {{ $siswa->status == 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-gray-50 text-gray-600 border-gray-200' }}">
-                                {{ strtoupper($siswa->status) }}
+                                {{ $siswa->status == 'active' ? 'ACTIVE' : 'NON-ACTIVE' }}
                             </span>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">

@@ -16,6 +16,7 @@ return new class extends Migration
             $table->foreignId('category_id')->constrained('categories')->cascadeOnDelete();
             $table->string('mapel_name');
             $table->integer('monthly_price');
+            $table->text('description')->nullable();
             $table->timestamps();
         });
     }

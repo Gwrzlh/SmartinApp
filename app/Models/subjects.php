@@ -19,4 +19,9 @@ class subjects extends Model
     {
         return $this->hasMany(schedules::class, 'subject_id', 'id');
     }
+
+    public function mentors()
+    {
+        return $this->belongsToMany(mentors::class, 'mentor_subjects', 'subject_id', 'mentor_id');
+    }
 }

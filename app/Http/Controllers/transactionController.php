@@ -90,47 +90,39 @@ class transactionController extends Controller
         $bundlings = [];
         $subjects = [];
 
+        // Di dalam function index
         if ($mode == 'paket') {
             $bundlings = bundlings::with('details.subject')
+                ->whereDate('start_date', '>=', now()->toDateString()) // HANYA yang belum mulai atau hari ini
+                ->where('is_active', 1)
                 ->when($request->filled('q_bundling'), function ($q) use ($request) {
-                    $pattern = '%' . $request->q_bundling . '%';
-                    $q->where(function($q2) use ($pattern){
-                        $q2->where('bundling_name', 'like', $pattern)
-                            ->orWhere('bundling_price', 'like', $pattern);
-                    })
-                    ->orWhereHas('details.subject', function($q3) use ($pattern){
-                        $q3->where('mapel_name', 'like', $pattern);
-                    });
+                    $q->where('bundling_name', 'like', '%' . $request->q_bundling . '%');
                 })
-                ->when($request->filled('category_id'), function ($q) use ($request) {
-                    $q->whereHas('details.subject', function($q2) use ($request) {
-                        $q2->where('category_id', $request->category_id);
-                    });
-                })
-                ->get();
+                ->get()
+                ->filter(function($bundle) {
+                    $enrolled = enrollments::where('item_id', $bundle->id)
+                                ->where('item_type', 'bundling')
+                                ->count();
+                    $bundle->remaining_slots = $bundle->capacity - $enrolled;
+                    return $bundle->remaining_slots > 0; 
+                });
         }
-
-        if ($mode == 'mapel') {
-            $subjects = subjects::with('categories')
-                ->when($request->filled('q_mapel'), function ($q) use ($request) {
-                    $pattern = '%' . $request->q_mapel . '%';
-                    $q->where(function ($q2) use ($pattern) {
-                        $q2->where('mapel_name', 'like', $pattern)
-                        ->orWhere('monthly_price', 'like', $pattern);
-                    });
-                })
-                ->when($request->filled('category_id'), function ($q) use ($request) {
-                    $q->where('category_id', $request->category_id);
-                })
-                ->orderBy('mapel_name')
-                ->get();
-        }
-
         $studentEnrollments = collect();
         if ($selectedStudent && $mode == 'spp') {
             $studentEnrollments = enrollments::where('student_id', $selectedStudent->id)
-                ->with('subject')
-                ->get();
+                ->where('item_type', 'bundling')
+                ->where('status_pembelajaran', '!=', 'Lulus')
+                ->with('bundling')
+                ->get()
+                ->filter(function($enrollment) {
+                    if (!$enrollment->bundling) return false;
+                    $start = \Carbon\Carbon::parse($enrollment->bundling->start_date);
+                    $duration = $enrollment->bundling->duration_mounths;
+                    $maxExpired = $start->copy()->addMonths($duration);
+                    $currentExpired = \Carbon\Carbon::parse($enrollment->expired_at);
+                    
+                    return $currentExpired->lessThan($maxExpired);
+                });
         }
 
         $categories = categories::all();
@@ -155,12 +147,9 @@ class transactionController extends Controller
             'gender' =>'required'
         ]);
 
-        // AMBIL NIK TERBESAR di bulan & tahun ini
-       // 1. Ambil prefix (TahunBulan)
         $prefix = now()->format('Ym');
 
-        // 2. Cari NIK terakhir TERMASUK yang sudah di-soft delete (withTrashed)
-        $latestStudent = students::withTrashed() // PENTING: Cek semua data termasuk yang di-trash
+        $latestStudent = students::withTrashed()
                             ->where('student_nik', 'LIKE', $prefix . '%')
                             ->orderByRaw('CAST(student_nik AS UNSIGNED) DESC')
                             ->first();
@@ -291,79 +280,80 @@ class transactionController extends Controller
                 'user_id' => Auth::id(),
                 'tgl_bayar' => now(),
                 'total_bayar' => $total,
-                'uang_diterima' => $paid,
-                'uang_kembali' => $change,
+                'uang_diterima' => $request->paid_amount,
+                'uang_kembali' => $request->paid_amount - $total,
                 'status_pembayaran' => 'paid'
             ]);
 
-            $shouldActivate = false;
             foreach ($cart as $item) {
                 $detail = transaction_details::create([
                     'transaction_id' => $transaction->id,
-                    'item_type' => $item['type'],
-                    'item_id' => $item['id'] ?? 0,
+                    'item_type' => $item['type'], // 'bundling', 'spp', 'registration'
+                    'item_id' => $item['id'],
                     'price' => $item['price']
                 ]);
 
-                if (in_array($item['type'], ['subject', 'bundling'])) $shouldActivate = true;
-                // kalo beli per matapelajaran 
-                if ($item['type'] == 'subject') {
-                    enrollments::create([
+                if ($item['type'] == 'bundling') {
+                    $bundle = bundlings::find($item['id']);
+
+                    // 1. Simpan Enrollment per-Bundling (Bukan per-Mapel)
+                    $enrollment = enrollments::create([
                         'student_id' => $studentId,
                         'transaction_detail_id' => $detail->id,
-                        'item_type' => 'subject',
-                        'item_id' => $item['id'],
+                        'item_id' => $bundle->id,
+                        'item_type' => 'bundling',
                         'tgl_daftar' => now(),
-                        'expired_at' =>now()->addMonth(),
+                        'expired_at' => \Carbon\Carbon::parse($bundle->start_date)->addMonth(),
                         'status_pembelajaran' => 'active'
                     ]);
-                    // beli per bundling 
-                } elseif ($item['type'] == 'bundling') {
-                    $bundlingDetails = \App\Models\bundling_details::where('bundling_id', $item['id'])->get();
-                    foreach ($bundlingDetails as $bDetail) {
-                        enrollments::create([
-                            'student_id' => $studentId,
-                            'transaction_detail_id' => $detail->id,
-                            'item_type' => 'subject',
-                            'item_id' => $bDetail->subject_id,
-                            'tgl_daftar' => now(),
-                            'expired_at' =>now()->addMonth(),
-                            'status_pembelajaran' => 'active'
+                    $schedules = \App\Models\schedules::where('bundling_id', $bundle->id)->get();
+                    foreach ($schedules as $sch) {
+                        EnrollmentSchedule::create([
+                            'enrollment_id' => $enrollment->id,
+                            'schedule_id' => $sch->id,
+                            'status' => 'ongoing'
                         ]);
                     }
-                }
+
+                    students::where('id', $studentId)->update(['status' => 'active']);
+                } 
+                
                 elseif ($item['type'] == 'spp') {
-                    $enrollment = enrollments::find($item['id']);
-                    if ($enrollment) {
-                        // Jika expired_at masih lama, tambahkan dari tgl tersebut (akumulatif)
-                        // Jika sudah lewat/kosong, tambahkan dari hari ini
+                    $enrollment = enrollments::with('bundling')->find($item['id']);
+                    if ($enrollment && $enrollment->bundling) {
                         $baseDate = ($enrollment->expired_at && $enrollment->expired_at > now()) 
-                                    ? \Carbon\Carbon::parse($enrollment->expired_at) 
-                                    : now();
+                                    ? \Carbon\Carbon::parse($enrollment->expired_at) : now();
 
-                        $enrollment->update([
-                            'expired_at' => $baseDate->addMonth(),
-                            'status_pembelajaran' => 'active'
-                        ]);
+                        $newExpired = $baseDate->addMonth();
+                        $maxExpired = \Carbon\Carbon::parse($enrollment->bundling->start_date)->addMonths($enrollment->bundling->duration_mounths);
+
+                        if ($newExpired->greaterThanOrEqualTo($maxExpired)) {
+                            $enrollment->update([
+                                'expired_at' => $maxExpired,
+                                'status_pembelajaran' => 'Lulus',
+                                'finish_at' => now()
+                            ]);
+                        } else {
+                            $enrollment->update([
+                                'expired_at' => $newExpired,
+                            ]);
+                        }
                     }
                 }
             }
 
-            if ($shouldActivate) {
-                students::where('id',$studentId)->update(['status' => 'active']);
-            }
 
-            DB::commit();
-
-            logActivity('Melakukan Transaksi Pembayaran', 'ID Transaksi: ' . $transaction->id . ' sebesar Rp.' . number_format($total, 0, ',', '.'));
+           DB::commit();
+            logActivity('Checkout Paket', 'Siswa ID: '.$studentId);
             session()->forget(['cart', 'selected_student']);
             return redirect()->route('kasir.transaction', [
                 'transaction_id' => $transaction->id,
                 'print_invoice' => $transaction->id
-            ])->with('success', 'Transaksi berhasil! Struk sedang dicetak.');
+            ])->with('success', 'Pendaftaran Berhasil! Jadwal otomatis terisi.');
+
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->with('error','Checkout gagal : '.$e->getMessage());
+            return back()->with('error', 'Gagal: ' . $e->getMessage());
         }
     }
 
@@ -403,7 +393,7 @@ class transactionController extends Controller
             ->when($request->filled('status'), function($q) use ($request) {
                 $q->where('status', $request->status);
             })
-            ->with(['enrollments.subject'])
+            ->with(['enrollments.subject', 'enrollments.bundling'])
             ->paginate(5)->withQueryString();
 
         return view('Kasir.siswaManage', compact('students'));

@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class bundlings extends Model
 {
     protected $table = 'bundlings';
-    protected $fillable = ['bundling_name','description','bundling_price','is_active'];
+    protected $fillable = ['bundling_name','description','bundling_price','is_active','duration_mounths','start_date','capacity'];
 
     public function details()
     {
@@ -16,7 +16,7 @@ class bundlings extends Model
 
     public function subjects()
     {
-        return $this->belongsTo(subjects::class, 'subjects_id');
+        return $this->belongsToMany(subjects::class, 'bundling_details', 'bundling_id', 'subject_id');
     }
 
 }

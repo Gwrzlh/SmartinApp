@@ -16,6 +16,10 @@ return new class extends Migration
             $table->string('bundling_name');
             $table->integer('bundling_price');
             $table->text('description')->nullable();
+            $table->boolean('is_active')->default(1);
+            $table->integer('duration_mounths')->nullable();
+            $table->date('start_date')->nullable();
+            $table->integer('capacity')->nullable();
             $table->timestamps();
         });
 

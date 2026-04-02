@@ -34,6 +34,9 @@ class bundlingController extends Controller
             'description'=>'required',
             'bundling_price'=>'required|numeric',
             'subjects_id'=>'required|array',
+            'duration_mounths'=>'required|numeric',
+            'start_date'=>'required',
+            'capacity'=>'required|numeric',
        ]);
 
        $isActive = $request->has('isActive') ? 1 : 0;
@@ -46,6 +49,9 @@ class bundlingController extends Controller
                 'description' => $request->description,
                 'bundling_price' => $cleanPrice,
                 'is_active' => $isActive,
+                'duration_mounths' => $request->duration_mounths,
+                'start_date' => $request->start_date,
+                'capacity' => $request->capacity,
             ]);
             foreach ($request->subjects_id as $subject_id) {
                 bundling_details::create([
@@ -81,6 +87,9 @@ class bundlingController extends Controller
                 'description' => $request->description,
                 'bundling_price' => $cleanPrice,
                 'is_active' => $isActive,
+                'duration_mounths' => $request->duration_months,
+                'start_date' => $request->start_date,
+                'capacity' => $request->capacity,
             ]);
             $bundling->details()->delete();
 

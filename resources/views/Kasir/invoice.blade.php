@@ -151,9 +151,14 @@
                     <span class="font-bold">
                         @if($detail->item_type == 'subject')
                             {{ \App\Models\subjects::find($detail->item_id)->mapel_name ?? 'Item' }}
+                        @elseif($detail->item_type == 'bundling')
+                            {{ \App\Models\bundlings::find($detail->item_id)->bundling_name ?? 'Program Bundling' }}
                         @elseif($detail->item_type == 'spp')
-                            @php $enroll = \App\Models\enrollments::with('subject')->find($detail->item_id); @endphp
-                            SPP {{ $enroll->subject->mapel_name ?? 'Item' }}
+                            @php 
+                                $enroll = \App\Models\enrollments::with(['subject', 'bundling'])->find($detail->item_id); 
+                                $itemName = $enroll->bundling->bundling_name ?? $enroll->subject->mapel_name ?? 'Item';
+                            @endphp
+                            SPP {{ $itemName }}
                         @else
                             {{ ucfirst($detail->item_type) }}
                         @endif

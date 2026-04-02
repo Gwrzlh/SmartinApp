@@ -18,7 +18,9 @@ return new class extends Migration
             $table->enum('gender', ['Laki-Laki', 'Perempuan']);
             $table->string('phone_number');
             $table->text('address');
+            $table->string('email')->nullable()->unique();
             $table->enum('status', ['active', 'inactive'])->default('active');
+            $table->softDeletes();
             $table->timestamps();
         });
     }

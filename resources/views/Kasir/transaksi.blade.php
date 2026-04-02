@@ -103,7 +103,7 @@
 
         <div class="flex-1 bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col overflow-hidden">
             <div class="flex border-b border-gray-50 shrink-0">
-                @foreach(['paket' => 'Beli Paket', 'mapel' => 'Katalog Mapel', 'spp' => 'Bayar SPP'] as $m => $label)
+                @foreach(['paket' => 'Beli Paket', 'spp' => 'Bayar SPP'] as $m => $label)
                 <a href="{{ route('kasir.transaction',['mode'=>$m]) }}" 
                    class="px-8 py-4 text-sm transition-all relative {{ $mode == $m ? 'text-blue-600 font-medium' : 'text-gray-400 hover:text-gray-600' }}">
                     {{ $label }}
@@ -130,8 +130,6 @@
                     <div class="relative flex-1">
                         @if($mode == 'paket')
                             <input type="text" name="q_bundling" value="{{ request('q_bundling') }}" placeholder="Cari bundling..." class="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-100 rounded-lg text-sm outline-none focus:bg-white transition-all">
-                        @elseif($mode == 'mapel')
-                            <input type="text" name="q_mapel" value="{{ request('q_mapel') }}" placeholder="Cari mapel..." class="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-100 rounded-lg text-sm outline-none focus:bg-white transition-all">
                         @elseif($mode == 'spp')
                             <input type="text" name="q_spp" value="{{ request('q_spp') }}" placeholder="Cari tagihan SPP..." class="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-100 rounded-lg text-sm outline-none focus:bg-white transition-all">
                         @endif
@@ -154,6 +152,7 @@
                                 </div>
                                 <h4 class="text-[13px] font-medium text-gray-800 mb-1 leading-tight">{{$bundling->bundling_name}}</h4>
                                 <p class="text-[11px] text-gray-400 mb-4 line-clamp-2 italic leading-relaxed">{{ $bundling->description }}</p>
+                                <p class="text-[11px] text-gray-400 mb-4 line-clamp-2 italic leading-relaxed">Dimulai Pada : {{ \Carbon\Carbon::parse($bundling->start_date)->format('d F Y') }}</p>
                                 
                                 <form action="{{ route('kasir.cart.add') }}" method="POST" class="mt-auto">
                                     @csrf
@@ -162,21 +161,6 @@
                                     <button class="w-full py-2 bg-white border border-gray-200 text-gray-600 rounded-lg text-[10px] font-semibold uppercase tracking-wider hover:bg-blue-500 hover:text-white hover:border-transparent transition-all">Tambah Ke Keranjang</button>
                                 </form>
                             </div>
-                            @endforeach
-                        </div>
-                    @elseif($mode == 'mapel')
-                        <div class="grid grid-cols-2 gap-4">
-                            @foreach($subjects as $subject)
-                                <div class="p-4 border border-gray-50 bg-gray-50/50 rounded-xl flex flex-col">
-                                    <p class="text-sm font-medium text-gray-800">{{ $subject->mapel_name }}</p>
-                                    <p class="text-xs text-blue-500 mb-4 font-medium">Rp{{ number_format($subject->monthly_price,0,',','.') }}</p>
-                                    <form action="{{ route('kasir.cart.add') }}" method="POST" class="mt-auto">
-                                        @csrf
-                                        <input type="hidden" name="type" value="subject">
-                                        <input type="hidden" name="id" value="{{ $subject->id }}"><input type="hidden" name="name" value="{{ $subject->mapel_name }}"><input type="hidden" name="price" value="{{ $subject->monthly_price }}">
-                                        <button class="w-full py-1.5 border border-gray-200 rounded-lg text-[10px] font-semibold uppercase hover:bg-blue-500 hover:text-white transition-all">+ Item</button>
-                                    </form>
-                                </div>
                             @endforeach
                         </div>
                     @elseif($mode == 'spp')
@@ -188,7 +172,7 @@
                                     @endphp
                                     <div class="p-4 bg-white border border-gray-100 rounded-xl flex flex-col hover:border-blue-100 transition-all shadow-sm">
                                         <div class="flex justify-between items-start mb-2">
-                                            <p class="text-[13px] font-medium text-gray-800">{{ $enrollment->subject->mapel_name ?? 'Mata Pelajaran' }}</p>
+                                            <p class="text-[13px] font-medium text-gray-800">{{ $enrollment->bundling->bundling_name ?? 'Program Bundling' }}</p>
                                             @if($isExpired)
                                                 <span class="px-2 py-0.5 rounded-full bg-rose-50 text-rose-500 text-[9px] font-semibold border border-rose-100">Menunggak</span>
                                             @else
@@ -203,8 +187,8 @@
                                             @csrf
                                             <input type="hidden" name="type" value="spp">
                                             <input type="hidden" name="id" value="{{ $enrollment->id }}">
-                                            <input type="hidden" name="name" value="SPP - {{ $enrollment->subject->mapel_name ?? '' }} (S.d: {{ \Carbon\Carbon::parse($enrollment->expired_at ?? now())->addMonth()->format('d M Y') }})">
-                                            <input type="hidden" name="price" value="{{ $enrollment->subject->monthly_price ?? 0 }}">
+                                            <input type="hidden" name="name" value="SPP - {{ $enrollment->bundling->bundling_name ?? '' }} (S.d: {{ \Carbon\Carbon::parse($enrollment->expired_at ?? now())->addMonth()->format('d M Y') }})">
+                                            <input type="hidden" name="price" value="{{ $enrollment->bundling->bundling_price ?? 0 }}">
                                             <button class="w-full py-2 bg-blue-50 hover:bg-blue-500 hover:text-white text-blue-600 rounded-lg text-[10px] font-semibold uppercase tracking-wider transition-all">Bayar SPP (+1 Bulan)</button>
                                         </form>
                                     </div>

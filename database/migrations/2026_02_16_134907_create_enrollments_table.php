@@ -22,7 +22,9 @@ return new class extends Migration
             $table->unsignedBigInteger('item_id');
             
             $table->date('tgl_daftar');
-            $table->enum('status_pembelajaran', ['active', 'graduated'])->default('active');
+            $table->date('expired_at')->nullable();
+            $table->enum('status_pembelajaran', ['active', 'inactive', 'Lulus'])->default('active');
+            $table->timestamp('finish_at')->nullable();
             $table->timestamps();
         });
     }
