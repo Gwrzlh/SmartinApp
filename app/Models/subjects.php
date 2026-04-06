@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class subjects extends Model
 {
     protected $table = 'subjects';
-    protected $fillable = ['mapel_name','category_id','monthly_price','description'];
+    protected $fillable = ['mapel_name','category_id','description'];
 
     public function categories()
     {

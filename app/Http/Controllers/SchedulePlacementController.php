@@ -2,13 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use App\Models\transactions;
-use App\Models\transaction_details;
 use App\Models\enrollments;
-use App\Models\schedules;
 use App\Models\EnrollmentSchedule;
+use App\Models\schedules;
+use App\Models\transaction_details;
+use App\Models\transactions;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class SchedulePlacementController extends Controller
@@ -32,7 +31,7 @@ class SchedulePlacementController extends Controller
         }
 
         $programs = $query->latest()
-            ->paginate(5) 
+            ->paginate(5)
             ->withQueryString();
 
         foreach ($programs as $bundle) {
@@ -40,12 +39,12 @@ class SchedulePlacementController extends Controller
                 ->where('item_id', $bundle->id)
                 ->where('status_pembelajaran', '!=', 'inactive')
                 ->count();
-            
+
             $bundle->active_students_count = $enrolledCount;
-            
+
             $start = \Carbon\Carbon::parse($bundle->start_date);
             $end = $start->copy()->addMonths($bundle->duration_mounths);
-            
+
             if ($start->isFuture()) {
                 $bundle->program_status = 'Belum Mulai';
             } elseif (now()->greaterThanOrEqualTo($end)) {
@@ -61,7 +60,7 @@ class SchedulePlacementController extends Controller
     public function show($id)
     {
         $program = \App\Models\bundlings::with('details.subject')->findOrFail($id);
-        
+
         $schedules = \App\Models\schedules::with(['subject', 'mentor'])
             ->where('bundling_id', $id)
             ->orderBy('hari')
@@ -119,24 +118,26 @@ class SchedulePlacementController extends Controller
 
             $enrollment = $enrollmentSchedule->enrollment;
             if ($targetSchedule->subject_id != $enrollment->item_id) { // assuming item_id is subject_id
-                 throw new \Exception('Jadwal tujuan harus memiliki mata pelajaran yang sama.');
+                throw new \Exception('Jadwal tujuan harus memiliki mata pelajaran yang sama.');
             }
 
             $enrollmentSchedule->update([
-                'schedule_id' => $targetSchedule->id
+                'schedule_id' => $targetSchedule->id,
             ]);
 
             DB::commit();
 
-            logActivity('Memindahkan Jadwal Siswa', 'Ke Jadwal Baru ID: ' . $targetSchedule->id);
+            logActivity('Memindahkan Jadwal Siswa', 'Ke Jadwal Baru ID: '.$targetSchedule->id);
 
             return back()->with('success', 'Siswa berhasil dipindahkan jadwalnya.');
 
         } catch (\Exception $e) {
             DB::rollBack();
+
             return back()->with('error', $e->getMessage());
         }
     }
+
     public function showPlacementUI($transaction_id)
     {
         $transaction = transactions::findOrFail($transaction_id);
@@ -178,7 +179,7 @@ class SchedulePlacementController extends Controller
             DB::transaction(function () use ($assignments) {
                 foreach ($assignments as $enrollment_id => $schedule_id) {
                     if (empty($schedule_id)) {
-                        throw new \Exception("Ada mata pelajaran yang belum dipilih jadwalnya.");
+                        throw new \Exception('Ada mata pelajaran yang belum dipilih jadwalnya.');
                     }
 
                     // 1. Lock the schedule row to prevent race conditions
@@ -197,19 +198,20 @@ class SchedulePlacementController extends Controller
                     // 3. Save Assignment
                     EnrollmentSchedule::create([
                         'enrollment_id' => $enrollment_id,
-                        'schedule_id'   => $schedule_id,
-                        'status'        => 'ongoing'
+                        'schedule_id' => $schedule_id,
+                        'status' => 'ongoing',
                     ]);
                 }
             });
 
             // If successful
             logActivity('Menyimpan Penempatan Jadwal Siswa');
+
             return redirect()->route('kasir.transaction')->with('success', 'Jadwal siswa berhasil disimpan dan dikunci!');
 
         } catch (\Exception $e) {
             // Transaction failed, rollback triggered automatically
-            return back()->with('error', 'Ops, Gagal Menyimpan: ' . $e->getMessage());
+            return back()->with('error', 'Ops, Gagal Menyimpan: '.$e->getMessage());
         }
     }
 }

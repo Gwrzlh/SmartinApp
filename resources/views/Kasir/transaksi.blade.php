@@ -4,7 +4,7 @@
 <div class="h-screen bg-[#F8F9FA] overflow-hidden flex flex-col p-4 font-sans text-gray-700">
     
     {{-- Alerts Area --}}
-    @if(session('success') || session('error') || $errors->any())
+    @if(session('success') || session('error') || session('debt_warning') || $errors->any())
         <div class="mb-4 shrink-0">
             @if(session('success'))
                 <div class="mb-4 bg-white border-l-4 border-emerald-400 p-4 shadow-sm flex justify-between items-center rounded-r-lg">
@@ -37,6 +37,26 @@
                 </script>
                 @endif
             @endif
+
+            {{-- ============================================================ --}}
+            {{-- ALERT TUNGGAKAN SPP: Banner merah prioritas tinggi             --}}
+            {{-- Muncul ketika kasir mencoba checkout untuk siswa yang menunggak --}}
+            {{-- ============================================================ --}}
+            @if(session('debt_warning'))
+                <div class="mb-3 bg-red-50 border-l-4 border-red-500 p-4 shadow-sm rounded-r-lg flex items-start gap-3">
+                    <div class="shrink-0 mt-0.5">
+                        <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                        </svg>
+                    </div>
+                    <div class="flex-1">
+                        <p class="text-sm font-bold text-red-700 mb-1">🚫 Pendaftaran Diblokir — Siswa Menunggak</p>
+                        <p class="text-xs text-red-600 leading-relaxed">{!! session('debt_warning') !!}</p>
+                        <p class="text-[10px] text-red-400 mt-2 italic">Arahkan siswa untuk menyelesaikan pembayaran SPP tunggakan terlebih dahulu melalui tab "Bayar SPP".</p>
+                    </div>
+                </div>
+            @endif
+
             @if(session('error') || $errors->any())
                 <div class="bg-white border-l-4 border-rose-400 p-4 shadow-sm rounded-r-lg">
                     <ul class="text-xs text-rose-500 list-disc list-inside">
@@ -163,71 +183,93 @@
                             </div>
                             @endforeach
                         </div>
-                    @elseif($mode == 'spp')
-                        @if($selectedStudent)
-                            <div class="space-y-3">
-                                @forelse($studentEnrollments as $enrollment)
-                                    @php
-                                        $isExpired = !$enrollment->expired_at || \Carbon\Carbon::parse($enrollment->expired_at)->isBefore(now());
-                                    @endphp
-                                    <div class="p-4 bg-white border border-gray-100 rounded-xl flex flex-col hover:border-blue-100 transition-all shadow-sm">
-                                        <div class="flex justify-between items-start mb-2">
-                                            <p class="text-[13px] font-medium text-gray-800">{{ $enrollment->bundling->bundling_name ?? 'Program Bundling' }}</p>
-                                            @if($isExpired)
-                                                <span class="px-2 py-0.5 rounded-full bg-rose-50 text-rose-500 text-[9px] font-semibold border border-rose-100">Menunggak</span>
-                                            @else
-                                                <span class="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-500 text-[9px] font-semibold border border-emerald-100">Aktif</span>
-                                            @endif
+                   @elseif($mode == 'spp')
+                    @if($selectedStudent)
+                        <div class="space-y-3">
+                            @forelse($studentEnrollments as $enrollment)
+                                @php
+                                    $expiredDate = $enrollment->expired_at ? \Carbon\Carbon::parse($enrollment->expired_at) : null;
+                                    $isExpired = !$expiredDate || $expiredDate->isBefore(now());
+
+                                    // Logic Cek Pelunasan Akhir (Atap Pembayaran)
+                                    $startDate = \Carbon\Carbon::parse($enrollment->bundling->start_date);
+                                    $duration = $enrollment->bundling->duration_mounths;
+                                    $maxExpired = $startDate->copy()->addMonths($duration);
+                                    
+                                    // Siswa dianggap lunas jika masa aktif sudah mencapai atau melebihi durasi program
+                                    $isFullyPaid = $expiredDate && $expiredDate->greaterThanOrEqualTo($maxExpired);
+                                @endphp
+
+                                <div class="p-4 bg-white border {{ $isFullyPaid ? 'border-emerald-100 bg-emerald-50/20' : 'border-gray-100' }} rounded-xl flex flex-col hover:border-blue-100 transition-all shadow-sm">
+                                    <div class="flex justify-between items-start mb-2">
+                                        <p class="text-[13px] font-medium text-gray-800">{{ $enrollment->bundling->bundling_name ?? 'Program Bundling' }}</p>
+                                        
+                                        @if($isFullyPaid)
+                                            <span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-600 text-[9px] font-bold border border-emerald-200">LUNAS</span>
+                                        @elseif($isExpired)
+                                            <span class="px-2 py-0.5 rounded-full bg-rose-50 text-rose-500 text-[9px] font-semibold border border-rose-100">Menunggak</span>
+                                        @else
+                                            <span class="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-500 text-[9px] font-semibold border border-emerald-100">Aktif</span>
+                                        @endif
+                                    </div>
+
+                                    <div class="text-[11px] text-gray-500 mb-4 flex items-center gap-1.5">
+                                        <x-akar-calendar class="w-3" />
+                                        <span>Masa Aktif: <span class="font-medium text-gray-700">{{ $expiredDate ? $expiredDate->format('d F Y') : '-' }}</span></span>
+                                    </div>
+
+                                    @if($isFullyPaid)
+                                        {{-- Tampilan ketika sudah lunas sampai akhir durasi --}}
+                                        <div class="w-full py-2 bg-gray-50 text-gray-400 border border-gray-100 rounded-lg text-[10px] font-bold text-center uppercase tracking-wider cursor-not-allowed">
+                                            Pembayaran Selesai
                                         </div>
-                                        <div class="text-[11px] text-gray-500 mb-4 flex items-center gap-1.5">
-                                            <x-akar-calendar class="w-3" />
-                                            <span>Masa Aktif: <span class="font-medium text-gray-700">{{ $enrollment->expired_at ? \Carbon\Carbon::parse($enrollment->expired_at)->format('d F Y') : '-' }}</span></span>
-                                        </div>
+                                    @else
                                         <form action="{{ route('kasir.cart.add') }}" method="POST" class="mt-auto">
                                             @csrf
                                             <input type="hidden" name="type" value="spp">
                                             <input type="hidden" name="id" value="{{ $enrollment->id }}">
-                                            <input type="hidden" name="name" value="SPP - {{ $enrollment->bundling->bundling_name ?? '' }} (S.d: {{ \Carbon\Carbon::parse($enrollment->expired_at ?? now())->addMonth()->format('d M Y') }})">
+                                            <input type="hidden" name="name" value="SPP - {{ $enrollment->bundling->bundling_name ?? '' }} (S.d: {{ ($expiredDate ?? now())->copy()->addMonth()->format('d M Y') }})">
                                             <input type="hidden" name="price" value="{{ $enrollment->bundling->bundling_price ?? 0 }}">
                                             <button class="w-full py-2 bg-blue-50 hover:bg-blue-500 hover:text-white text-blue-600 rounded-lg text-[10px] font-semibold uppercase tracking-wider transition-all">Bayar SPP (+1 Bulan)</button>
                                         </form>
+                                    @endif
+                                </div>
+                            @empty
+                                <div class="p-4 text-center text-sm text-gray-500 italic bg-gray-50 rounded-lg border border-gray-100">
+                                    Siswa ini belum mengambil mata pelajaran apapun.
+                                </div>
+                            @endforelse
+                        </div>
+                    @else
+                        <div class="mb-4">
+                            <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Daftar Siswa dengan Tunggakan SPP</h4>
+                            <div class="grid grid-cols-1 gap-2">
+                                @forelse($inactiveStudents as $student)
+                                    <div class="p-3 bg-white border border-rose-100 rounded-xl flex justify-between items-center group hover:border-rose-300 transition-all shadow-sm">
+                                        <div>
+                                            <p class="text-sm font-medium text-gray-800 leading-none mb-1">{{ $student->student_name }}</p>
+                                            <span class="text-[10px] text-gray-400 font-mono tracking-tighter">{{ $student->student_nik }}</span>
+                                        </div>
+                                        <form action="{{ route('kasir.selectStudent') }}" method="POST">
+                                            @csrf
+                                            <input type="hidden" name="student_id" value="{{ $student->id }}">
+                                            <input type="hidden" name="mode" value="spp">
+                                            <button class="px-4 py-1.5 bg-rose-500 text-white text-[10px] font-bold rounded-md hover:bg-rose-600 transition-colors uppercase">Pilih & Bayar</button>
+                                        </form>
                                     </div>
                                 @empty
-                                    <div class="p-4 text-center text-sm text-gray-500 italic bg-gray-50 rounded-lg border border-gray-100">
-                                        Siswa ini belum mengambil mata pelajaran apapun.
+                                    <div class="flex flex-col items-center justify-center py-10 text-center bg-emerald-50/30 rounded-xl border border-dashed border-emerald-100">
+                                        <div class="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm mb-3 text-emerald-400">
+                                            <x-akar-check class="w-6" />
+                                        </div>
+                                        <h4 class="text-[13px] font-medium text-emerald-800 mb-1">Semua Siswa Terbayar!</h4>
+                                        <p class="text-[11px] text-emerald-600/70">Tidak ada tunggakan SPP yang terdeteksi saat ini.</p>
                                     </div>
                                 @endforelse
                             </div>
-                        @else
-                            <div class="mb-4">
-                                <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Daftar Siswa dengan Tunggakan SPP</h4>
-                                <div class="grid grid-cols-1 gap-2">
-                                    @forelse($inactiveStudents as $student)
-                                        <div class="p-3 bg-white border border-rose-100 rounded-xl flex justify-between items-center group hover:border-rose-300 transition-all shadow-sm">
-                                            <div>
-                                                <p class="text-sm font-medium text-gray-800 leading-none mb-1">{{ $student->student_name }}</p>
-                                                <span class="text-[10px] text-gray-400 font-mono tracking-tighter">{{ $student->student_nik }}</span>
-                                            </div>
-                                            <form action="{{ route('kasir.selectStudent') }}" method="POST">
-                                                @csrf
-                                                <input type="hidden" name="student_id" value="{{ $student->id }}">
-                                                <input type="hidden" name="mode" value="spp">
-                                                <button class="px-4 py-1.5 bg-rose-500 text-white text-[10px] font-bold rounded-md hover:bg-rose-600 transition-colors uppercase">Pilih & Bayar</button>
-                                            </form>
-                                        </div>
-                                    @empty
-                                        <div class="flex flex-col items-center justify-center py-10 text-center bg-emerald-50/30 rounded-xl border border-dashed border-emerald-100">
-                                            <div class="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm mb-3 text-emerald-400">
-                                                <x-akar-check class="w-6" />
-                                            </div>
-                                            <h4 class="text-[13px] font-medium text-emerald-800 mb-1">Semua Siswa Terbayar!</h4>
-                                            <p class="text-[11px] text-emerald-600/70">Tidak ada tunggakan SPP yang terdeteksi saat ini.</p>
-                                        </div>
-                                    @endforelse
-                                </div>
-                            </div>
-                        @endif
+                        </div>
                     @endif
+                @endif
                 </div>
             </div>
         </div>

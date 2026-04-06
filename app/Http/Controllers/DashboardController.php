@@ -7,6 +7,8 @@ use Illuminate\Http\Request;
 use Carbon\Carbon;
 use App\Models\students;
 use App\Models\transactions;
+use App\Models\enrollments;
+use App\Models\bundlings;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 
@@ -19,9 +21,16 @@ class DashboardController extends Controller
             $cashierName = Auth::user()->full_name ?? Auth::user()->name ?? 'Kasir';
             
             // --- 1. SYNC STATUS SISWA (Logic dari Transaksi) ---
-            // Update otomatis siswa menjadi inactive jika masa kursus habis
+            // Update otomatis siswa menjadi inactive jika masa kursus habis.
+            // PENGECUALIAN: Siswa yang menunggak (graduated_debt) tetap 'active'
+            // agar sistem keuangan bisa terus menagih.
             $activeSiswa = \App\Models\students::where('status', 'active')->get();
             foreach ($activeSiswa as $student) {
+                // Jika siswa punya enrollment graduated_debt, jangan ubah statusnya
+                if ($student->isGraduatedWithDebt()) {
+                    continue;
+                }
+
                 $stillHasActiveCourse = \App\Models\enrollments::where('student_id', $student->id)
                     ->where('status_pembelajaran', 'active')
                     ->where('expired_at', '>=', now()->toDateString())
@@ -47,7 +56,46 @@ class DashboardController extends Controller
                 
                 // Total Siswa Aktif
                 'activeCount' => \App\Models\students::where('status', 'active')->count(),
+
+                // Jumlah siswa yang berstatus graduated_debt (lulus tapi nunggak)
+                'graduatedDebtCount' => \App\Models\enrollments::where('status_pembelajaran', 'graduated_debt')
+                    ->distinct('student_id')->count('student_id'),
             ];
+
+            // --- 2B. DATA PIUTANG (untuk widget tunggakan) ---
+            // Total piutang dari siswa yang sudah lulus tapi masih nunggak SPP.
+            // Dihitung dari jumlah bulan yang terlewati × harga bundling.
+            $debtEnrollments = \App\Models\enrollments::with(['bundling', 'student'])
+                ->where('status_pembelajaran', 'graduated_debt')
+                ->whereNotNull('expired_at')
+                ->get();
+
+            $totalPiutangLulusan = 0;
+            $debtByStudent = [];
+
+            foreach ($debtEnrollments as $enrollment) {
+                if (!$enrollment->bundling || !$enrollment->student) continue;
+
+                $expiredDate = \Carbon\Carbon::parse($enrollment->expired_at);
+                $monthsLate  = max(1, (int) $expiredDate->diffInMonths(now()) + 1);
+                $debtAmount  = $enrollment->bundling->bundling_price * $monthsLate;
+
+                $totalPiutangLulusan += $debtAmount;
+
+                // Kumpulkan per siswa untuk top debtor
+                $studentId = $enrollment->student_id;
+                if (!isset($debtByStudent[$studentId])) {
+                    $debtByStudent[$studentId] = [
+                        'student'  => $enrollment->student,
+                        'total'    => 0,
+                    ];
+                }
+                $debtByStudent[$studentId]['total'] += $debtAmount;
+            }
+
+            // Sort descending berdasarkan total tunggakan, ambil Top 5
+            usort($debtByStudent, fn($a, $b) => $b['total'] <=> $a['total']);
+            $topDebtors = array_slice($debtByStudent, 0, 5);
 
             // --- 3. JADWAL HARI INI ---
             $dayMap = [
@@ -70,10 +118,12 @@ class DashboardController extends Controller
                 ->get();
 
             return view('Kasir.dashboard', array_merge([
-                'today' => $todayStr, 
-                'cashierName' => $cashierName, 
-                'schedules' => $schedules,
-                'officeStatus' => 'Open'
+                'today'               => $todayStr,
+                'cashierName'         => $cashierName,
+                'schedules'           => $schedules,
+                'officeStatus'        => 'Open',
+                'totalPiutangLulusan' => $totalPiutangLulusan,
+                'topDebtors'          => $topDebtors,
             ], $data));
         }
 }

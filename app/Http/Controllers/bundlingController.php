@@ -110,9 +110,21 @@ class bundlingController extends Controller
     }
     public function destroy(bundlings $bundling)
     {
-        $bundling->delete();
-        logActivity('Menghapus Bundling');
-        return redirect()->route('admin.bundling.index')->with('success', 'Bundling deleted successfully.');
+        try {
+            $bundling_name = $bundling->bundling_name;
+            $bundling->delete();
+            logActivity('Menghapus Bundling', 'Bundling: ' . $bundling_name);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Bundling dan data terkait (Jadwal, dll) berhasil dihapus.'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menghapus Bundling: ' . $e->getMessage()
+            ], 500);
+        }
     }
     public function show($id)
     {
@@ -135,5 +147,31 @@ class bundlingController extends Controller
         }
 
         return abort(404);
+    }
+    public function duplicate($id)
+    {
+        $bundling = bundlings::with('details')->findOrFail($id);
+        
+        try {
+            DB::beginTransaction();
+            
+            $newBundling = $bundling->replicate();
+            $newBundling->bundling_name = $bundling->bundling_name . ' (Copy)';
+            $newBundling->save();
+            
+            foreach ($bundling->details as $detail) {
+                $newDetail = $detail->replicate();
+                $newDetail->bundling_id = $newBundling->id;
+                $newDetail->save();
+            }
+            
+            DB::commit();
+            logActivity('Melakukan Duplicate Bundling', '   Bundling Original: ' . $bundling->bundling_name . ' -> New: ' . $newBundling->bundling_name);
+            return redirect()->route('admin.bundling.index')->with('success', 'Bundling duplicated successfully.');
+            
+        } catch (\Exception $e) {
+            DB::rollback();
+            return back()->with('error', 'Gagal menduplikasi bundling: ' . $e->getMessage());
+        }
     }
 }

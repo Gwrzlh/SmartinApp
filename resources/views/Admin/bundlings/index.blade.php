@@ -8,9 +8,9 @@
         display: inline-block;
         width: 20px;
         height: 20px;
-        border: 3px solid rgba(255, 255, 255, 0.3);
+        border: 2px solid rgba(0, 0, 0, 0.1);
         border-radius: 50%;
-        border-top-color: white;
+        border-top-color: currentColor;
         animation: spin 0.8s linear infinite;
     }
     @keyframes spin {
@@ -85,6 +85,9 @@
                                 <a href="{{ route('admin.bundling.edit', $bundling->id) }}" class="text-indigo-600 hover:text-indigo-900">
                                     <x-akar-edit class="w-4 h-4 inline" /> Edit
                                 </a>
+                                 <button onclick="confirmDuplicate(this, '{{ route('admin.bundling.duplicate', $bundling->id) }}')" class="text-orange-600 hover:text-orange-900 transition-all active:scale-90" title="Duplikasi Bundling">
+                                    <x-eos-file-copy class="w-4 h-4 inline" />
+                                </button>  
                                 <form action="{{ route('admin.bundling.destroy', $bundling->id) }}" method="POST" class="inline deleteForm">
                                     @csrf
                                     @method('DELETE')
@@ -192,28 +195,69 @@
                 });
             });
     }
+    let isDuplicating = false;
+    function confirmDuplicate(button, url) {
+        if (isDuplicating) return;
+
+        Swal.fire({
+            title: 'Konfirmasi Duplikasi',
+            text: 'Apakah Anda yakin ingin menduplikasi bundling ini?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#f97316',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Ya, Duplikasi!',
+            cancelButtonText: 'Batal',
+            reverseButtons: true
+        }).then((result) => {
+            if (result.isConfirmed) {
+                isDuplicating = true;
+                
+                // Show loading state on button
+                button.disabled = true;
+                button.classList.add('opacity-50', 'cursor-not-allowed');
+                button.innerHTML = '<div class="loading-spinner" style="width: 14px; height: 14px; border-width: 2px;"></div>';
+
+                // Show full screen loading
+                Swal.fire({
+                    title: 'Menduplikasi...',
+                    text: 'Mohon tunggu, data sedang diduplikasi.',
+                    icon: 'info',
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
+                window.location.href = url;
+            }
+        });
+    }
+
     function confirmDelete(button) {
         Swal.fire({
-            title: 'Konfirmasi Hapus',
-            text: 'Apakah Anda yakin ingin menghapus Mapel ini? Data yang dihapus tidak dapat dikembalikan.',
+            title: 'Konfirmasi Penghapusan Permanen',
+            text: 'Mohon perhatikan kembali: Menghapus data ini akan menghapus seluruh data lain yang saling berkaitan secara permanen. Tindakan ini tidak dapat dibatalkan. Apakah Anda yakin ingin melanjutkan?',
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#ef4444',
             cancelButtonColor: '#6b7280',
-            confirmButtonText: 'Ya, Hapus!',
-            cancelButtonText: 'Batal'
+            confirmButtonText: 'Ya, Hapus Permanen',
+            cancelButtonText: 'Batal',
+            reverseButtons: true
         }).then((result) => {
             if (result.isConfirmed) {
                 const form = button.closest('.deleteForm');
                 
                 // Show loading
                 Swal.fire({
-                    title: 'Menghapus...',
-                    text: 'Mohon tunggu, data sedang dihapus.',
+                    title: 'Menghapus Data...',
+                    text: 'Mohon tunggu sebentar, data sedang diproses.',
                     icon: 'info',
                     allowOutsideClick: false,
                     allowEscapeKey: false,
-                    didOpen: (modal) => {
+                    didOpen: () => {
                         Swal.showLoading();
                     }
                 });
@@ -226,24 +270,27 @@
                     },
                     body: new FormData(form)
                 })
-                .then(() => {
-                    Swal.fire({
-                        title: 'Berhasil!',
-                        text: 'Bundling berhasil dihapus.',
-                        icon: 'success',
-                        confirmButtonColor: '#06b6d4',
-                        confirmButtonText: 'OK'
-                    }).then(() => {
-                        location.reload();
-                    });
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        Swal.fire({
+                            title: 'Berhasil!',
+                            text: 'Data berhasil dihapus secara permanen.',
+                            icon: 'success',
+                            confirmButtonColor: '#06b6d4'
+                        }).then(() => {
+                            location.reload();
+                        });
+                    } else {
+                        throw new Error(data.message || 'Gagal menghapus data.');
+                    }
                 })
-                .catch(() => {
+                .catch(error => {
                     Swal.fire({
-                        title: 'Error!',
-                        text: 'Gagal menghapus Mapel.',
+                        title: 'Gagal!',
+                        text: error.message || 'Terjadi kesalahan saat menghapus data.',
                         icon: 'error',
-                        confirmButtonColor: '#06b6d4',
-                        confirmButtonText: 'OK'
+                        confirmButtonColor: '#06b6d4'
                     });
                 });
             }

@@ -200,26 +200,27 @@
     }
     function confirmDelete(button) {
         Swal.fire({
-            title: 'Konfirmasi Hapus',
-            text: 'Apakah Anda yakin ingin menghapus Mapel ini? Data yang dihapus tidak dapat dikembalikan.',
+            title: 'Konfirmasi Penghapusan Permanen',
+            text: 'Mohon perhatikan kembali: Menghapus data ini akan menghapus seluruh data lain yang saling berkaitan secara permanen. Tindakan ini tidak dapat dibatalkan. Apakah Anda yakin ingin melanjutkan?',
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#ef4444',
             cancelButtonColor: '#6b7280',
-            confirmButtonText: 'Ya, Hapus!',
-            cancelButtonText: 'Batal'
+            confirmButtonText: 'Ya, Hapus Permanen',
+            cancelButtonText: 'Batal',
+            reverseButtons: true
         }).then((result) => {
             if (result.isConfirmed) {
                 const form = button.closest('.deleteForm');
                 
                 // Show loading
                 Swal.fire({
-                    title: 'Menghapus...',
-                    text: 'Mohon tunggu, data sedang dihapus.',
+                    title: 'Menghapus Data...',
+                    text: 'Mohon tunggu sebentar, data sedang diproses.',
                     icon: 'info',
                     allowOutsideClick: false,
                     allowEscapeKey: false,
-                    didOpen: (modal) => {
+                    didOpen: () => {
                         Swal.showLoading();
                     }
                 });
@@ -228,28 +229,32 @@
                     method: 'POST',
                     headers: {
                         'X-CSRF-TOKEN': form.querySelector('input[name="_token"]').value,
-                        'X-Requested-With': 'XMLHttpRequest'
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json'
                     },
                     body: new FormData(form)
                 })
-                .then(() => {
-                    Swal.fire({
-                        title: 'Berhasil!',
-                        text: 'Mentor berhasil dihapus.',
-                        icon: 'success',
-                        confirmButtonColor: '#06b6d4',
-                        confirmButtonText: 'OK'
-                    }).then(() => {
-                        location.reload();
-                    });
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        Swal.fire({
+                            title: 'Berhasil!',
+                            text: 'Data berhasil dihapus secara permanen.',
+                            icon: 'success',
+                            confirmButtonColor: '#06b6d4'
+                        }).then(() => {
+                            location.reload();
+                        });
+                    } else {
+                        throw new Error(data.message || 'Gagal menghapus data.');
+                    }
                 })
-                .catch(() => {
+                .catch(error => {
                     Swal.fire({
-                        title: 'Error!',
-                        text: 'Gagal menghapus Mapel.',
+                        title: 'Gagal!',
+                        text: error.message || 'Terjadi kesalahan saat menghapus data.',
                         icon: 'error',
-                        confirmButtonColor: '#06b6d4',
-                        confirmButtonText: 'OK'
+                        confirmButtonColor: '#06b6d4'
                     });
                 });
             }

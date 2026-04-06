@@ -118,10 +118,21 @@ class mentorController extends Controller
     }
     public function destroy(mentors $mentor)
     {
-        $mentor_name = $mentor->mentor_name;
-        $mentor->delete();
-        logActivity('Menghapus Mentor', 'Mentor: ' . $mentor_name);
-        return redirect()->route('admin.mentor.index')->with('success', 'Mentor deleted successfully.');
+        try {
+            $mentor_name = $mentor->mentor_name;
+            $mentor->delete();
+            logActivity('Menghapus Mentor', 'Mentor: ' . $mentor_name);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Data Mentor dan data terkait (Jadwal, dll) berhasil dihapus.'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menghapus Mentor: ' . $e->getMessage()
+            ], 500);
+        }
     }
     public function show($id)
     {

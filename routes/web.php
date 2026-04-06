@@ -45,6 +45,7 @@ Route::middleware('auth')->group(function () {
         Route::resource('subjects', SubjectsController::class);
         Route::resource('mentor', mentorController::class);
         Route::resource('bundling', bundlingController::class);
+        Route::get('bundling/{id}/duplicate', [bundlingController::class, 'duplicate'])->name('bundling.duplicate');
         Route::resource('schedules', scheduleController::class);
         Route::get('get-subjects-by-bundling/{bundlingId}', [scheduleController::class, 'getSubjectsByBundling'])->name('getSubjectsByBundling');
     Route::get('get-mentors-by-subject/{subjectId}', [scheduleController::class, 'getMentorsBySubject'])->name('getMentorsBySubject');

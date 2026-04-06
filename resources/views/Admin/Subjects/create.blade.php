@@ -76,16 +76,6 @@
                                 focus:bg-white focus:border-cyan-500 focus:ring-4 focus:ring-cyan-500/10 outline-none placeholder:text-gray-300" 
                                 placeholder="ex: Matematika,Python,Gitar" required></textarea>
                           </div>
-                          <div class="space-y-2">
-                            <label for="monthly_price" class="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Harga Perbulan (Rp)</label>
-                            <div class="relative">
-                                <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">Rp</span>
-                                <input type="text" name="monthly_price" id="monthly_price" value="{{ old('monthly_price', isset($subject) ? number_format($subject->monthly_price, 0, ',', '.') : '') }}"
-                                    class="block w-full pl-10 px-4 py-3 rounded-xl border-2 border-gray-100 bg-gray-50/50 text-gray-700 transition-all 
-                                    focus:bg-white focus:border-cyan-500 focus:ring-4 focus:ring-cyan-500/10 outline-none placeholder:text-gray-300" 
-                                    placeholder="100.000" required oninput="formatRupiah(this)">
-                            </div>
-                          </div>
                     </div>
 
                     <div class="flex items-center justify-end space-x-4 pt-10 mt-6 border-t border-gray-50">
@@ -105,7 +95,6 @@
 </div>
 
 <script>
-    // Display validation errors as SweetAlert if any
     @if ($errors->any())
         const errors = [
             @foreach ($errors->all() as $error)
@@ -124,24 +113,9 @@
             }
         });
     @endif
-
-    // Format input value as Rupiah currency while typing
-    function formatRupiah(input) {
-        // remove any non-digit characters
-        let value = input.value.replace(/\D/g, '');
-        if (value === '') {
-            input.value = '';
-            return;
-        }
-        // format using Indonesian locale
-        input.value = new Intl.NumberFormat('id-ID').format(value);
-    }
-
-    // Handle form submission with loading
     function handleFormSubmit(event) {
 
         const form = document.getElementById('subjectsForm');
-        const priceInput = document.getElementById('monthly_price'); 
         const submitBtn = document.getElementById('submitBtn');
         const submitText = document.getElementById('submitText');
 
@@ -149,8 +123,8 @@
         event.preventDefault();
 
         
-        const cleanValue = priceInput.value.replace(/\./g, '');
-        priceInput.value = cleanValue;
+        // const cleanValue = priceInput.value.replace(/\./g, '');
+        // priceInput.value = cleanValue;
 
       
         if (!form.checkValidity()) {

@@ -107,9 +107,41 @@
                             </div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-center">
-                            <span class="px-2.5 py-1 inline-flex text-[10px] leading-4 font-bold rounded-full border {{ $siswa->status == 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-gray-50 text-gray-600 border-gray-200' }}">
-                                {{ $siswa->status == 'active' ? 'ACTIVE' : 'NON-ACTIVE' }}
+                            {{-- ========================================================== --}}
+                        {{-- TRAFFIC LIGHT BADGE SYSTEM                                   --}}
+                        {{-- Prioritas: graduated_debt > hasDebt > active > inactive       --}}
+                        {{-- ========================================================== --}}
+                        @php
+                            $isGraduatedDebt = $siswa->isGraduatedWithDebt();
+                            $isHasDebt       = !$isGraduatedDebt && $siswa->hasDebt();
+                        @endphp
+
+                        @if($isGraduatedDebt)
+                            {{-- 🔴 MERAH BERDENYUT: Sudah lulus tapi masih ada tunggakan SPP --}}
+                            <span class="px-2.5 py-1 inline-flex items-center gap-1.5 text-[10px] leading-4 font-bold rounded-full border bg-red-50 text-red-700 border-red-200">
+                                <span class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse shrink-0"></span>
+                                LULUS — NUNGGAK
                             </span>
+                        @elseif($isHasDebt)
+                            {{-- 🟡 KUNING: Masih aktif tapi ada tunggakan SPP --}}
+                            <span class="px-2.5 py-1 inline-flex items-center gap-1.5 text-[10px] leading-4 font-bold rounded-full border bg-amber-50 text-amber-700 border-amber-200">
+                                <span class="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0"></span>
+                                AKTIF — NUNGGAK
+                            </span>
+                        @elseif($siswa->status == 'active')
+                            {{-- 🟢 HIJAU: Aktif dan sudah lunas --}}
+                            <span class="px-2.5 py-1 inline-flex items-center gap-1.5 text-[10px] leading-4 font-bold rounded-full border bg-emerald-50 text-emerald-700 border-emerald-100">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
+                                AKTIF — LUNAS
+                            </span>
+                        @else
+                            {{-- ⚫ ABU: Non-aktif / belum mendaftar --}}
+                            <span class="px-2.5 py-1 inline-flex items-center gap-1.5 text-[10px] leading-4 font-bold rounded-full border bg-gray-50 text-gray-600 border-gray-200">
+                                <span class="w-1.5 h-1.5 rounded-full bg-gray-400 shrink-0"></span>
+                                NON-AKTIF
+                            </span>
+                        @endif
+
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
                             <div class="flex items-center justify-center gap-2">

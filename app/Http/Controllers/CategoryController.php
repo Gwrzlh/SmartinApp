@@ -55,16 +55,8 @@ class CategoryController extends Controller
         return redirect()->route('admin.category.index')->with('success', 'Category updated successfully.');
     }
     public function destroy(categories $category)
-    {   
+    {
         try {
-            if ($category->subjects()->count() > 0) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Kategori tidak bisa dihapus karena masih digunakan oleh Mata Pelajaran!'
-                ], 400); // 400 Bad Request
-            }
-
-            // Jika aman, lakukan penghapusan
             $categoryName = $category->category_name;
             $category->delete();
 
@@ -72,13 +64,13 @@ class CategoryController extends Controller
             
             return response()->json([
                 'success' => true,
-                'message' => 'Kategori berhasil dihapus.'
+                'message' => 'Kategori dan data terkait berhasil dihapus secara permanen.'
             ], 200);
 
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Terjadi kesalahan sistem: ' . $e->getMessage()
+                'message' => 'Gagal menghapus kategori: ' . $e->getMessage()
             ], 500);
         }
     }

@@ -22,19 +22,41 @@ class transactionController extends Controller
         $cashierName = Auth::user()->full_name ?? Auth::user()->name ?? 'Kasir';
 
         // Auto-update enrollments yang sudah melewati masa aktif menjadi inactive
+        // CATATAN: Tidak mengubah 'graduated_debt' agar tetap bisa ditagih
         enrollments::where('status_pembelajaran', 'active')
             ->where('expired_at', '<', now()->toDateString())
             ->update(['status_pembelajaran' => 'inactive']);
 
-        $activeSiswa = students::where('status', 'active')->get();
-        foreach ($activeSiswa as $student) {
+        // Ganti loop $activeSiswa yang lama dengan ini:
+        $allStudents = students::all(); // Cek semua siswa agar bisa 're-activate' otomatis
+        foreach ($allStudents as $student) {
+            if ($student->isGraduatedWithDebt()) {
+                continue;
+            }
+
+            // Cek apakah ada enrollment 'active' yang belum expired
             $stillHasActiveCourse = enrollments::where('student_id', $student->id)
                 ->where('status_pembelajaran', 'active')
                 ->where('expired_at', '>=', now()->toDateString())
                 ->exists();
 
-            if (!$stillHasActiveCourse) {
-                $student->update(['status' => 'inactive']);
+            // Cek juga apakah dia sudah 'graduated' tapi masa belajarnya masih jalan
+            $isGraduatedButStillStudying = enrollments::where('student_id', $student->id)
+                ->where('status_pembelajaran', 'graduated')
+                ->whereHas('bundling', function($q) {
+                    $q->where('is_active', 1);
+                })->exists();
+
+            if ($stillHasActiveCourse || $isGraduatedButStillStudying) {
+                // Jika kriteria terpenuhi, pastikan dia 'active'
+                if ($student->status !== 'active') {
+                    $student->update(['status' => 'active']);
+                }
+            } else {
+                // Jika tidak punya pendaftaran aktif/lulus-jalan, baru set 'inactive'
+                if ($student->status !== 'inactive') {
+                    $student->update(['status' => 'inactive']);
+                }
             }
         }
 
@@ -108,20 +130,21 @@ class transactionController extends Controller
                 });
         }
         $studentEnrollments = collect();
+            // Di dalam function index (transactionController.php)
         if ($selectedStudent && $mode == 'spp') {
             $studentEnrollments = enrollments::where('student_id', $selectedStudent->id)
                 ->where('item_type', 'bundling')
-                ->where('status_pembelajaran', '!=', 'Lulus')
+                // Tampilkan semua yang belum Lulus (termasuk yang 'inactive')
+                ->whereNotIn('status_pembelajaran', ['graduated', 'Lulus']) 
                 ->with('bundling')
                 ->get()
                 ->filter(function($enrollment) {
                     if (!$enrollment->bundling) return false;
-                    $start = \Carbon\Carbon::parse($enrollment->bundling->start_date);
-                    $duration = $enrollment->bundling->duration_mounths;
-                    $maxExpired = $start->copy()->addMonths($duration);
-                    $currentExpired = \Carbon\Carbon::parse($enrollment->expired_at);
-                    
-                    return $currentExpired->lessThan($maxExpired);
+
+                    // HAPUS filter is_active == 1 di sini. 
+                    // Kita ingin tagihan tetap muncul meskipun program sudah berakhir 
+                    // tapi siswa belum melunasi pembayarannya.
+                    return true; 
                 });
         }
 
@@ -267,6 +290,22 @@ class transactionController extends Controller
         if (!$studentId) return back()->with('error','Pilih siswa terlebih dahulu');
         if (empty($cart)) return back()->with('error','Cart masih kosong');
 
+        // ================================================================
+        // VALIDASI TUNGGAKAN: Blokir checkout jika siswa masih memiliki
+        // tunggakan SPP yang belum diselesaikan.
+        // Siswa harus lunas terlebih dahulu sebelum bisa mendaftar program baru.
+        // ================================================================
+        $student = students::find($studentId);
+        if ($student && $student->hasDebt()) {
+            $totalDebt = $student->totalDebt();
+            return back()->with(
+                'debt_warning',
+                "⛔ Pendaftaran GAGAL! Siswa <strong>{$student->student_name}</strong> masih memiliki " .
+                "tunggakan SPP sebesar <strong>Rp " . number_format($totalDebt, 0, ',', '.') . 
+                "</strong>. Harap selesaikan pembayaran tunggakan terlebih dahulu sebelum mendaftar program baru."
+            );
+        }
+
         $total = collect($cart)->sum(fn($item) => $item['price'] * ($item['quantity'] ?? 1));
 
         $request->validate(['paid_amount' => ['required', 'numeric', "min:{$total}"]]);
@@ -318,25 +357,54 @@ class transactionController extends Controller
                     students::where('id', $studentId)->update(['status' => 'active']);
                 } 
                 
-                elseif ($item['type'] == 'spp') {
+               elseif ($item['type'] == 'spp') {
                     $enrollment = enrollments::with('bundling')->find($item['id']);
                     if ($enrollment && $enrollment->bundling) {
-                        $baseDate = ($enrollment->expired_at && $enrollment->expired_at > now()) 
-                                    ? \Carbon\Carbon::parse($enrollment->expired_at) : now();
+                        $bundling = $enrollment->bundling;
 
-                        $newExpired = $baseDate->addMonth();
-                        $maxExpired = \Carbon\Carbon::parse($enrollment->bundling->start_date)->addMonths($enrollment->bundling->duration_mounths);
+                        // Hitung batas akhir program (patokan kelulusan)
+                        $endDate = \Carbon\Carbon::parse($bundling->start_date)
+                            ->addMonths($bundling->duration_mounths);
 
-                        if ($newExpired->greaterThanOrEqualTo($maxExpired)) {
-                            $enrollment->update([
-                                'expired_at' => $maxExpired,
-                                'status_pembelajaran' => 'Lulus',
-                                'finish_at' => now()
-                            ]);
+                        // Hitung expired_at baru: perpanjang 1 bulan dari expired saat ini (atau dari sekarang jika belum ada)
+                        $baseDate   = ($enrollment->expired_at && \Carbon\Carbon::parse($enrollment->expired_at)->gt(now()))
+                                        ? \Carbon\Carbon::parse($enrollment->expired_at)
+                                        : now();
+                        $newExpired = $baseDate->copy()->addMonth();
+
+                        // Jangan melebihi batas maksimum program
+                        if ($newExpired->gt($endDate)) {
+                            $newExpired = $endDate->copy();
+                        }
+
+                        // --- TENTUKAN STATUS PEMBELAJARAN ---
+                        // Jika program sudah ditutup (is_active == 0) DAN
+                        // expired_at baru sudah menyentuh/melewati endDate → GRADUATED
+                        if ($bundling->is_active == 0 && $newExpired->gte($endDate)) {
+                            $newStatus = 'graduated';
                         } else {
-                            $enrollment->update([
-                                'expired_at' => $newExpired,
-                            ]);
+                            // Program masih berjalan, atau belum lunas penuh → ACTIVE
+                            $newStatus = 'active';
+                        }
+
+                        $enrollment->update([
+                            'expired_at'          => $newExpired,
+                            'status_pembelajaran' => $newStatus,
+                        ]);
+
+                        // Update status siswa sesuai hasil enrollment
+                        if ($newStatus === 'graduated') {
+                            // Cek apakah masih ada enrollment aktif lain sebelum set inactive
+                            $hasOtherActive = enrollments::where('student_id', $studentId)
+                                ->where('status_pembelajaran', 'active')
+                                ->where('id', '!=', $enrollment->id)
+                                ->exists();
+
+                            students::where('id', $studentId)
+                                ->update(['status' => $hasOtherActive ? 'active' : 'inactive']);
+                        } else {
+                            // Siswa baru bayar SPP → pastikan active
+                            students::where('id', $studentId)->update(['status' => 'active']);
                         }
                     }
                 }

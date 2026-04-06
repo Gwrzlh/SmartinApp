@@ -38,14 +38,12 @@ class SubjectsController extends Controller
         $request->validate([
             'mapel_name' => 'required',
             'category_id' => 'required|exists:categories,id',
-            'monthly_price' => 'required|numeric',
             'description' => 'nullable',
         ]);
 
         subjects::create([
             'mapel_name' => $request->mapel_name,
             'category_id' => $request->category_id,
-            'monthly_price' => $cleanPrice,
             'description' => $request->description,
         ]);
 
@@ -65,14 +63,12 @@ class SubjectsController extends Controller
         $request->validate([
             'mapel_name' => 'required',
             'category_id' => 'required|exists:categories,id',
-            'monthly_price' => 'required|numeric',
             'description' => 'nullable',
         ]);
 
         $subject->update([
             'mapel_name' => $request->mapel_name,
             'category_id' => $request->category_id,
-            'monthly_price' => $cleanPrice,
             'description' => $request->description,
         ]);
 
@@ -82,28 +78,35 @@ class SubjectsController extends Controller
     }
     public function destroy(subjects $subject)
     {
-        $mapel_name = $subject->mapel_name;
-        $subject->delete();
-        logActivity('Menghapus Mapel', 'Mapel: ' . $mapel_name);
-        return redirect()->route('admin.subjects.index')->with('success', 'Subject deleted successfully.');
+        try {
+            $mapel_name = $subject->mapel_name;
+            $subject->delete();
+            logActivity('Menghapus Mapel', 'Mapel: ' . $mapel_name);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Mata Pelajaran dan data terkait (Jadwal, dll) berhasil dihapus.'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menghapus Mata Pelajaran: ' . $e->getMessage()
+            ], 500);
+        }
     }
     public function show($id)
     {
         $subject = subjects::findOrFail($id);
-        // Cek jika request datang dari AJAX/Fetch
         if (request()->ajax()) {
             return response()->json([
                 'subject_name'   => $subject->mapel_name,
                 'category_name'  => $subject->categories->category_name,
                 'description'      => $subject->description,
-                'monthly_price'      => $subject->monthly_price,
-                // Format tanggal agar bagus dibaca JS
                 'created_at' => $subject->created_at->toISOString(),
                 'updated_at' => $subject->updated_at->toISOString(),
             ]);
         }
 
-        // Jika diakses biasa (bukan AJAX), bisa diarahkan ke view lain atau abort
         return abort(404);
     }
         

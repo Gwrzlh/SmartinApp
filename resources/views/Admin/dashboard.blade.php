@@ -130,19 +130,78 @@
                 </div>
             </div>
 
-            {{-- <div class="bg-white rounded-[30px] p-6 shadow-sm border border-gray-100">
-                <h3 class="text-gray-800 font-bold mb-4 text-sm uppercase tracking-widest">Aksi Cepat</h3>
-                <div class="grid grid-cols-2 gap-3">
-                    <button class="p-3 text-xs font-bold bg-gray-50 hover:bg-cyan-500 hover:text-white rounded-2xl transition-all border border-gray-100 flex flex-col items-center gap-2 group">
-                      <x-akar-person class="w-5 h-5" />  <a href="{{ route('admin.users.index') }}">+ Siswa</a> 
-                    </button>
-                    <button class="p-3 text-xs font-bold bg-gray-50 hover:bg-yellow-500 hover:text-white rounded-2xl transition-all border border-gray-100 flex flex-col items-center gap-2 group">
-                       <x-eos-packages-o class="w-5 h-5" /><a href="{{ 'admin.bundling.index' }}">Tambah Bundling +</a> 
-                    </button>
+            {{-- ============================================================ --}}
+            {{-- WIDGET PIUTANG: Ringkasan siswa lulus yang masih menunggak     --}}
+            {{-- Data ini dikirim dari DashboardController (Admin)               --}}
+            {{-- ============================================================ --}}
+            @if(isset($totalPiutangLulusan) && $totalPiutangLulusan > 0)
+            <div class="bg-white rounded-[30px] p-6 shadow-sm border border-red-100">
+                {{-- Header Widget --}}
+                <div class="flex items-center gap-3 mb-4 pb-4 border-b border-red-50">
+                    <div class="p-2.5 bg-red-100 rounded-xl text-red-600 shrink-0">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-bold text-red-400 uppercase tracking-widest">Piutang Siswa Lulus</p>
+                        <p class="text-lg font-black text-red-600">Rp {{ number_format($totalPiutangLulusan, 0, ',', '.') }}</p>
+                    </div>
                 </div>
+
+                {{-- Top 5 Debtor List --}}
+                @if(isset($topDebtors) && count($topDebtors) > 0)
+                <div>
+                    <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Top Penunggak</p>
+                    <div class="space-y-2">
+                        @foreach($topDebtors as $i => $debtor)
+                        <div class="flex items-center justify-between py-1.5">
+                            <div class="flex items-center gap-2.5 flex-1 min-w-0">
+                                {{-- Rank badge --}}
+                                <span class="w-5 h-5 rounded-full text-[9px] font-black flex items-center justify-center shrink-0
+                                    {{ $i === 0 ? 'bg-red-100 text-red-600' : ($i === 1 ? 'bg-orange-100 text-orange-600' : 'bg-gray-100 text-gray-500') }}">
+                                    {{ $i + 1 }}
+                                </span>
+                                {{-- Nama siswa --}}
+                                <div class="min-w-0">
+                                    <p class="text-[12px] font-semibold text-gray-800 truncate">{{ $debtor['student']->student_name }}</p>
+                                    <p class="text-[9px] text-gray-400 font-mono">{{ $debtor['student']->student_nik }}</p>
+                                </div>
+                            </div>
+                            {{-- Total tunggakan --}}
+                            <span class="text-[11px] font-bold text-red-600 shrink-0 ml-2">
+                                Rp {{ number_format($debtor['total'], 0, ',', '.') }}
+                            </span>
+                        </div>
+                        @endforeach
+                    </div>
+                </div>
+                @endif
+            </div>
+            @else
+            {{-- Jika tidak ada piutang, tampilkan status aman --}}
+            <div class="bg-white rounded-[30px] p-5 shadow-sm border border-emerald-100">
+                <div class="flex items-center gap-3">
+                    <div class="p-2.5 bg-emerald-100 rounded-xl text-emerald-600 shrink-0">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">Status Piutang</p>
+                        <p class="text-sm font-bold text-emerald-700">Semua Lunas ✓</p>
+                        <p class="text-[10px] text-gray-400">Tidak ada tunggakan siswa lulus.</p>
+                    </div>
+                </div>
+            </div>
+            @endif
+
+            {{-- Quick Actions (commented out in original) --}}
+            {{-- <div class="bg-white rounded-[30px] p-6 shadow-sm border border-gray-100">
+                ...
             </div> --}}
         </div>
 
     </div>
 </div>
-@endsection
+@endsection

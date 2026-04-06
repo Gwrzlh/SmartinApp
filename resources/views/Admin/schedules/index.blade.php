@@ -186,15 +186,63 @@
 
     function confirmDelete(button) {
         Swal.fire({
-            title: 'Hapus Jadwal?',
-            text: "Jadwal yang memiliki pendaftar aktif tidak disarankan untuk dihapus!",
+            title: 'Konfirmasi Penghapusan Permanen',
+            text: 'Mohon perhatikan kembali: Menghapus data ini akan menghapus seluruh data lain yang saling berkaitan secara permanen. Tindakan ini tidak dapat dibatalkan. Apakah Anda yakin ingin melanjutkan?',
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#ef4444',
-            confirmButtonText: 'Ya, Hapus'
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Ya, Hapus Permanen',
+            cancelButtonText: 'Batal',
+            reverseButtons: true
         }).then((result) => {
             if (result.isConfirmed) {
-                button.closest('form').submit();
+                const form = button.closest('.deleteForm');
+                
+                // Show loading
+                Swal.fire({
+                    title: 'Menghapus Data...',
+                    text: 'Mohon tunggu sebentar, data sedang diproses.',
+                    icon: 'info',
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
+                fetch(form.action, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': form.querySelector('input[name="_token"]').value,
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json'
+                    },
+                    body: new FormData(form)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        Swal.fire({
+                            title: 'Berhasil!',
+                            text: 'Data berhasil dihapus secara permanen.',
+                            icon: 'success',
+                            confirmButtonColor: '#06b6d4'
+                        }).then(() => {
+                            location.reload();
+                        });
+                    } else {
+                        throw new Error(data.message || 'Gagal menghapus data.');
+                    }
+                })
+                .catch(error => {
+                    Swal.fire({
+                        title: 'Gagal!',
+                        text: error.message || 'Terjadi kesalahan saat menghapus data.',
+                        icon: 'error',
+                        confirmButtonColor: '#06b6d4'
+                    });
+                });
             }
         });
     }

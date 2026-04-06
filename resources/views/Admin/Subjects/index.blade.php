@@ -72,7 +72,6 @@
                         <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">No.</th>
                         <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Nama Mapel</th>
                         <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Kategori</th>
-                        <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Harga Bulanan</th>
                         <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Deskripsi</th>
                         <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
                     </tr>
@@ -85,7 +84,6 @@
                             </td>
                             <td class="px-6 py-4 text-center text-sm text-gray-900">{{ $subject->mapel_name }}</td>
                             <td class="px-6 py-4 text-center text-sm text-gray-900">{{ $subject->categories->category_name ?? 'Tidak ada kategori' }}</td>
-                            <td class="px-6 py-4 text-center text-sm text-gray-900">Rp {{ number_format($subject->monthly_price, 0, ',', '.') }}</td>
                             <td class="px-6 py-4 text-center text-sm text-gray-900">{{ Str::limit($subject->description, 50) }}</td>
                             <td class="px-6 py-4 text-center text-sm font-medium space-x-2">
                                 <button onclick="ShowSubjects({{ $subject->id }})" class="p-2 text-cyan-500 hover:bg-cyan-50 rounded-lg">
@@ -152,10 +150,6 @@
                         <p class="text-sm font-semibold text-gray-700">${data.description}</p>
                     </div>
                     <div class="space-y-1">
-                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Monthly Price</p>
-                        <p class="text-sm font-semibold text-gray-700">Rp ${data.monthly_price.toLocaleString('id-ID')}</p>
-                    </div>
-                    <div class="space-y-1">
                         <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Member Since</p>
                         <p class="text-sm font-semibold text-gray-700">${new Date(data.created_at).toLocaleDateString('id-ID', {day:'2-digit', month:'long', year:'numeric'})}</p>
                     </div>
@@ -181,26 +175,27 @@
     }
     function confirmDelete(button) {
         Swal.fire({
-            title: 'Konfirmasi Hapus',
-            text: 'Apakah Anda yakin ingin menghapus Mapel ini? Data yang dihapus tidak dapat dikembalikan.',
+            title: 'Konfirmasi Penghapusan Permanen',
+            text: 'Mohon perhatikan kembali: Menghapus data ini akan menghapus seluruh data lain yang saling berkaitan secara permanen. Tindakan ini tidak dapat dibatalkan. Apakah Anda yakin ingin melanjutkan?',
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#ef4444',
             cancelButtonColor: '#6b7280',
-            confirmButtonText: 'Ya, Hapus!',
-            cancelButtonText: 'Batal'
+            confirmButtonText: 'Ya, Hapus Permanen',
+            cancelButtonText: 'Batal',
+            reverseButtons: true
         }).then((result) => {
             if (result.isConfirmed) {
                 const form = button.closest('.deleteForm');
                 
                 // Show loading
                 Swal.fire({
-                    title: 'Menghapus...',
-                    text: 'Mohon tunggu, data sedang dihapus.',
+                    title: 'Menghapus Data...',
+                    text: 'Mohon tunggu sebentar, data sedang diproses.',
                     icon: 'info',
                     allowOutsideClick: false,
                     allowEscapeKey: false,
-                    didOpen: (modal) => {
+                    didOpen: () => {
                         Swal.showLoading();
                     }
                 });
@@ -209,28 +204,32 @@
                     method: 'POST',
                     headers: {
                         'X-CSRF-TOKEN': form.querySelector('input[name="_token"]').value,
-                        'X-Requested-With': 'XMLHttpRequest'
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json'
                     },
                     body: new FormData(form)
                 })
-                .then(() => {
-                    Swal.fire({
-                        title: 'Berhasil!',
-                        text: 'Mapel berhasil dihapus.',
-                        icon: 'success',
-                        confirmButtonColor: '#06b6d4',
-                        confirmButtonText: 'OK'
-                    }).then(() => {
-                        location.reload();
-                    });
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        Swal.fire({
+                            title: 'Berhasil!',
+                            text: 'Data berhasil dihapus secara permanen.',
+                            icon: 'success',
+                            confirmButtonColor: '#06b6d4'
+                        }).then(() => {
+                            location.reload();
+                        });
+                    } else {
+                        throw new Error(data.message || 'Gagal menghapus data.');
+                    }
                 })
-                .catch(() => {
+                .catch(error => {
                     Swal.fire({
-                        title: 'Error!',
-                        text: 'Gagal menghapus Mapel.',
+                        title: 'Gagal!',
+                        text: error.message || 'Terjadi kesalahan saat menghapus data.',
                         icon: 'error',
-                        confirmButtonColor: '#06b6d4',
-                        confirmButtonText: 'OK'
+                        confirmButtonColor: '#06b6d4'
                     });
                 });
             }

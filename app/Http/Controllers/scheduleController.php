@@ -153,19 +153,19 @@ class scheduleController extends Controller
     {
         try {
             $schedule = schedules::findOrFail($id);
-            
-            //: Cek jika sudah ada siswa yang mendaftar, mungkin jangan dihapus dulu
-            if ($schedule->enrollments()->count() > 0) {
-                return back()->with('error', 'Tidak bisa menghapus jadwal yang sudah memiliki pendaftar.');
-            }
-
             $schedule->delete();
 
             logActivity('Menghapus Jadwal Kelas');
 
-            return redirect()->route('admin.schedules.index')->with('success', 'Jadwal berhasil dihapus!');
+            return response()->json([
+                'success' => true,
+                'message' => 'Jadwal dan data terkait berhasil dihapus secara permanen.'
+            ]);
         } catch (\Exception $e) {
-            return back()->with('error', 'Gagal menghapus jadwal: ' + $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menghapus jadwal: ' . $e->getMessage()
+            ], 500);
         }
     }
    public function getSubjectsByBundling($bundlingId)
