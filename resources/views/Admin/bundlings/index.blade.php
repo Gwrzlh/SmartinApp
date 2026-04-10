@@ -78,23 +78,54 @@
                                     <span class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Nonaktif</span>
                                 @endif
                             </td>
-                            <td class="px-6 py-4 text-center text-sm font-medium space-x-2">
-                                <button onclick="ShowBundlingDetails({{ $bundling->id }})" class="p-2 text-cyan-500 hover:bg-cyan-50 rounded-lg">
-                                    <x-akar-eye-open class="w-5 h-5 inline" />
-                                </button>
-                                <a href="{{ route('admin.bundling.edit', $bundling->id) }}" class="text-indigo-600 hover:text-indigo-900">
-                                    <x-akar-edit class="w-4 h-4 inline" /> Edit
-                                </a>
-                                 <button onclick="confirmDuplicate(this, '{{ route('admin.bundling.duplicate', $bundling->id) }}')" class="text-orange-600 hover:text-orange-900 transition-all active:scale-90" title="Duplikasi Bundling">
-                                    <x-eos-file-copy class="w-4 h-4 inline" />
-                                </button>  
-                                <form action="{{ route('admin.bundling.destroy', $bundling->id) }}" method="POST" class="inline deleteForm">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="button" onclick="confirmDelete(this)" class="text-red-600 hover:text-red-900">
-                                        <x-akar-trash-can class="w-4 h-4 inline" /> Hapus
+                            <td class="px-6 py-4">
+                                <div class="flex items-center justify-center gap-2">
+                                    @php
+                                        $isExpired = \Carbon\Carbon::parse($bundling->start_date)->addDay()->isPast();
+                                    @endphp
+
+                                    {{-- Detail --}}
+                                    <button onclick="ShowBundlingDetails({{ $bundling->id }})" 
+                                        class="p-2 text-cyan-600 hover:bg-cyan-50 rounded-xl transition-all duration-200" 
+                                        title="Detail Bundling">
+                                        <x-akar-eye-open class="w-5 h-5" />
                                     </button>
-                                </form>
+
+                                    {{-- Edit --}}
+                                    @if(!$isExpired)
+                                        <a href="{{ route('admin.bundling.edit', $bundling->id) }}" 
+                                            class="inline-flex items-center px-3 py-2 text-sm font-medium text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all duration-200">
+                                            <x-akar-edit class="w-4 h-4 mr-1.5" /> Edit
+                                        </a>
+                                    @else
+                                        <button disabled class="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-400 cursor-not-allowed opacity-60 bg-gray-50 rounded-xl" title="Sudah lewat masa edit (H+1)">
+                                            <x-akar-edit class="w-4 h-4 mr-1.5" /> Edit
+                                        </button>
+                                    @endif
+
+                                    {{-- Duplicate --}}
+                                    <button onclick="confirmDuplicate(this, '{{ route('admin.bundling.duplicate', $bundling->id) }}')" 
+                                        class="inline-flex items-center px-3 py-2 text-sm font-medium text-orange-600 hover:bg-orange-50 rounded-xl transition-all duration-200 active:scale-95" 
+                                        title="Duplikasi Bundling">
+                                        <x-eos-file-copy class="w-4 h-4 mr-1.5" /> Salin
+                                    </button>  
+
+                                    {{-- Delete --}}
+                                    @if(!$isExpired)
+                                        <form action="{{ route('admin.bundling.destroy', $bundling->id) }}" method="POST" class="inline deleteForm">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="button" onclick="confirmDelete(this)" 
+                                                class="inline-flex items-center px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-xl transition-all duration-200">
+                                                <x-akar-trash-can class="w-4 h-4 mr-1.5" /> Hapus
+                                            </button>
+                                        </form>
+                                    @else
+                                        <button disabled class="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-400 cursor-not-allowed opacity-60 bg-gray-50 rounded-xl" title="Sudah lewat masa hapus (H+1)">
+                                            <x-akar-trash-can class="w-4 h-4 mr-1.5" /> Hapus
+                                        </button>
+                                    @endif
+                                </div>
                             </td>
                         </tr>
                     @empty

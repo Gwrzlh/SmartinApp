@@ -26,7 +26,7 @@ class students extends Model
     public function hasDebt(): bool
     {
         return $this->enrollments()
-            ->where('status_pembelajaran', 'active')
+            ->whereIn('status_pembelajaran', ['active', 'inactive']) // Hanya cek pendaftaran yang masih berjalan/tunggak
             ->where('expired_at', '<', now()->toDateString())
             ->exists();
     }
@@ -43,7 +43,7 @@ class students extends Model
         // Ambil enrollment yang menunggak beserta data bundling-nya
         $debtEnrollments = $this->enrollments()
             ->with('bundling')
-            ->where('status_pembelajaran', 'active')
+            ->whereIn('status_pembelajaran', ['active', 'inactive']) // Abaikan 'Keluar' dan 'graduated'
             ->where('expired_at', '<', now()->toDateString())
             ->get();
 

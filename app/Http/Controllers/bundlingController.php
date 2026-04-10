@@ -111,18 +111,51 @@ class bundlingController extends Controller
     public function destroy(bundlings $bundling)
     {
         try {
-            $bundling_name = $bundling->bundling_name;
-            $bundling->delete();
-            logActivity('Menghapus Bundling', 'Bundling: ' . $bundling_name);
+            // 1. Validasi: Apakah sudah dimulai?
+            $today = now()->toDateString();
+            if ($bundling->start_date && $bundling->start_date <= $today) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Gagal menghapus: Program ini sudah dimulai atau sedang berjalan.'
+                ], 422);
+            }
+
+            // 2. Validasi: Apakah sudah ada siswa?
+            $hasSiswa = \App\Models\enrollments::where('item_id', $bundling->id)
+                ->where('item_type', 'bundling')
+                ->exists();
             
+            if ($hasSiswa) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Gagal menghapus: Sudah ada siswa yang terdaftar dalam program ini.'
+                ], 422);
+            }
+
+            // 3. Eksekusi Hapus Permanen
+            DB::beginTransaction();
+            $bundling_name = $bundling->bundling_name;
+            
+            // Hapus detail manual karena kita pakai RESTRICT di database
+            $bundling->details()->delete();
+            // Hapus jadwal terkait (jika ada)
+            \App\Models\schedules::where('bundling_id', $bundling->id)->delete();
+            
+            $bundling->delete();
+            
+            logActivity('Menghapus Bundling Secara Permanen', 'Bundling: ' . $bundling_name);
+            DB::commit();
+
             return response()->json([
                 'success' => true,
-                'message' => 'Bundling dan data terkait (Jadwal, dll) berhasil dihapus.'
+                'message' => 'Program bundling berhasil dihapus secara permanen.'
             ]);
+
         } catch (\Exception $e) {
+            DB::rollBack();
             return response()->json([
                 'success' => false,
-                'message' => 'Gagal menghapus Bundling: ' . $e->getMessage()
+                'message' => 'Terjadi kesalahan sistem: ' . $e->getMessage()
             ], 500);
         }
     }
@@ -157,6 +190,8 @@ class bundlingController extends Controller
             
             $newBundling = $bundling->replicate();
             $newBundling->bundling_name = $bundling->bundling_name . ' (Copy)';
+            $newBundling->start_date = null; // Kosongkan agar bisa diatur ulang
+            $newBundling->is_active = 0;    // Set nonaktif sebagai draft
             $newBundling->save();
             
             foreach ($bundling->details as $detail) {

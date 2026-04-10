@@ -80,7 +80,7 @@
                     @forelse($transactions as $trx)
                     <tr class="hover:bg-gray-50 transition-colors">
                         <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm font-semibold text-gray-900">#TRX-{{ $trx->id }}</div>
+                            <div class="text-sm font-semibold text-gray-900">{{ $trx->id }}</div>
                             <div class="text-xs text-gray-500 mt-0.5">{{ \Carbon\Carbon::parse($trx->tgl_bayar)->format('d M Y, H:i') }}</div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">

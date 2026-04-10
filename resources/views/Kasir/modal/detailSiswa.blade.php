@@ -174,6 +174,9 @@ function openProfileModal(studentId) {
             if (enroll.status_pembelajaran === 'Lulus') {
                 statusBadge = '<span class="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-[10px] font-bold uppercase tracking-wider">LULUS</span>';
                 borderHover = 'hover:border-blue-300 hover:bg-blue-50/50';
+            } else if (enroll.status_pembelajaran === 'Keluar') {
+                statusBadge = '<span class="px-2 py-0.5 bg-gray-600 text-white rounded text-[10px] font-bold uppercase tracking-wider">KELUAR</span>';
+                borderHover = 'hover:border-gray-400 hover:bg-gray-100';
             } else if (enroll.status_pembelajaran === 'active') {
                 const now = new Date();
                 const exp = new Date(enroll.expired_at);
@@ -187,9 +190,30 @@ function openProfileModal(studentId) {
             } else {
                 statusBadge = '<span class="px-2 py-0.5 bg-gray-200 text-gray-700 rounded text-[10px] font-bold uppercase tracking-wider">' + enroll.status_pembelajaran + '</span>';
             }
+
+            // Tombol Keluar (Hanya jika masih active dan program sudah mulai)
+            let quitButton = '';
+            if (enroll.status_pembelajaran === 'active') {
+                const bStart = (enroll.bundling && enroll.bundling.start_date) ? new Date(enroll.bundling.start_date) : null;
+                const now = new Date();
+                
+                // Jika sudah mulai (atau tidak ada start_date), tampilkan tombol Keluar
+                if (!bStart || bStart <= now) {
+                    const csrf = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+                    quitButton = `
+                        <form action="/enrollments/${enroll.id}/quit" method="POST" onsubmit="return confirm('Konfirmasi: Siswa ini akan dinyatakan BERHENTI/KELUAR dari program? Sisa tagihan SPP untuk program ini akan otomatis berhenti.')" class="mt-2 pt-2 border-t border-gray-50 flex justify-end">
+                            <input type="hidden" name="_token" value="${csrf}">
+                            <button type="submit" class="group/quit flex items-center gap-1.5 px-3 py-1 bg-rose-50 hover:bg-rose-500 rounded-lg transition-all duration-300">
+                                <span class="text-[9px] font-black text-rose-600 group-hover/quit:text-white uppercase tracking-widest">Berhenti / Keluar</span>
+                                <svg class="w-3 h-3 text-rose-400 group-hover/quit:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                            </button>
+                        </form>
+                    `;
+                }
+            }
             
             enrollList.innerHTML += `
-                <div class="p-4 rounded-2xl bg-white border border-gray-200 flex flex-col gap-3 group transition-all ${borderHover}">
+                <div class="p-4 rounded-2xl bg-white border border-gray-200 flex flex-col group transition-all ${borderHover}">
                     <div class="flex items-start justify-between gap-2">
                         <div class="flex items-center gap-3">
                             <div class="p-2 bg-gray-50 rounded-xl shadow-sm text-gray-500 transition-colors">
@@ -201,9 +225,10 @@ function openProfileModal(studentId) {
                         </div>
                         ${statusBadge}
                     </div>
-                    <div class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1 border-t border-gray-50 pt-2">
+                    <div class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">
                         BATAS SPP: <span class="text-gray-600">${expDate}</span>
                     </div>
+                    ${quitButton}
                 </div>
             `;
         });

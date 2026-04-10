@@ -104,13 +104,14 @@
                     <div class="flex flex-col md:flex-row md:items-end gap-6 pt-4">
                         <div class="flex-1 space-y-2">
                             <label for="role" class="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Otoritas Akses (Role)</label>
-                            <select name="role" id="role" class="...">
-                                <option value="" disabled {{ old('role', $user->role ?? '') == '' ? 'selected' : '' }}>Pilih hak akses...</option>
-                                
-                                <option value="admin" {{ old('role', $user->role) == 'admin' ? 'selected' : '' }}>Administrator</option>
-                                <option value="kasir" {{ old('role', $user->role) == 'kasir' ? 'selected' : '' }}>Staff Kasir</option>
-                                <option value="owner" {{ old('role', $user->role) == 'owner' ? 'selected' : '' }}>Owner</option>
-                            </select>
+                                <select name="role" id="role" 
+                                    class="w-full mt-2 px-4 py-2 text-xs font-semibold bg-gray-100 border border-gray-200 text-gray-400 rounded-xl cursor-not-allowed appearance-none opacity-75" 
+                                    disabled>
+                                    <option value="" disabled {{ old('role', $user->role ?? '') == '' ? 'selected' : '' }}>Pilih hak akses...</option>
+                                    <option value="admin" {{ old('role', $user->role) == 'admin' ? 'selected' : '' }}>Administrator</option>
+                                    <option value="kasir" {{ old('role', $user->role) == 'kasir' ? 'selected' : '' }}>Staff Kasir</option>
+                                    <option value="owner" {{ old('role', $user->role) == 'owner' ? 'selected' : '' }}>Owner</option>
+                                </select>
                         </div>
 
                         <div class="flex items-center pb-3 px-4 h-[52px] bg-gray-50/50 border-2 border-gray-100 rounded-xl group hover:bg-amber-50/50 hover:border-amber-100 transition-all">

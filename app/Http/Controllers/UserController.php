@@ -64,18 +64,14 @@ class UserController extends Controller
             'full_name' => 'required',
             'email' => 'required|email|unique:users,email,' . $user->id,
             'password' => 'nullable|min:6',
-            'role' => 'required|in:admin,owner,kasir',
             'username' => 'required|unique:users,username,' . $user->id,
             // 'is_active' => 'required|boolean',
         ]);
- 
         $isActive = $request->has('active') ? 1 : 0;
-        
         $user->update([
             'full_name' => $request->full_name,
             'email' => $request->email,
             'password' => $request->password ? bcrypt($request->password) : $user->password,
-            'role' => $request->role,
             'username' => $request->username,
             'is_active' => $isActive,
         ]);
@@ -98,7 +94,6 @@ class UserController extends Controller
     public function show($id)
     {
         $user = User::findOrFail($id);
-        // Cek jika request datang dari AJAX/Fetch
         if (request()->ajax()) {
             return response()->json([
                 'username'   => $user->username,
@@ -106,7 +101,6 @@ class UserController extends Controller
                 'email'      => $user->email,
                 'role'       => $user->role,
                 'is_active'  => $user->is_active,
-                // Format tanggal agar bagus dibaca JS
                 'created_at' => $user->created_at->toISOString(),
                 'updated_at' => $user->updated_at->toISOString(),
             ]);
@@ -119,7 +113,7 @@ class UserController extends Controller
     {
         $search = $request->get('search');
 
-        $users = User::whereIn('role', ['admin', 'kasir'])
+        $users = User::whereIn('role', ['admin', 'kasir', 'owner'])
             ->when($search, function ($query) use ($search) {
                 return $query->where(function ($q) use ($search) {
                     $q->where('username', 'like', "%{$search}%")

@@ -64,13 +64,22 @@ class CategoryController extends Controller
             
             return response()->json([
                 'success' => true,
-                'message' => 'Kategori dan data terkait berhasil dihapus secara permanen.'
+                'message' => 'Kategori berhasil dihapus secara permanen.'
             ], 200);
 
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Cek jika error disebabkan oleh Restrict Constraint (SQLState 23000)
+            if ($e->getCode() === "23000" || str_contains($e->getMessage(), '1451')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Gagal menghapus: Kategori ini masih digunakan oleh data Mata Pelajaran. Silakan hapus atau pindahkan mata pelajaran terkait terlebih dahulu.'
+                ], 422);
+            }
+            throw $e;
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Gagal menghapus kategori: ' . $e->getMessage()
+                'message' => 'Terjadi kesalahan sistem: ' . $e->getMessage()
             ], 500);
         }
     }

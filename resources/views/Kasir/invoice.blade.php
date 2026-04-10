@@ -14,7 +14,7 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>Struk Pembayaran #{{ $transaction->id }}</title>
+    <title>{{ $transaction->transaction_type == 'refund' ? 'Struk Refund' : 'Struk Pembayaran' }} #{{ $transaction->id }}</title>
     <style>
         @page { margin: 0; }
         body {
@@ -117,7 +117,7 @@
 </head>
 <body>
     <div class="container">
-       <div class="header text-center">
+        <div class="header text-center">
             @if($base64)
                 <div class="logo-container">
                     <img src="{{ $base64 }}" alt="Logo" class="styled-logo">
@@ -125,10 +125,13 @@
             @endif
             
             <div class="shop-name" style="margin-top: 0; padding-top: 0;">SMARTIN</div>
+            @if($transaction->transaction_type == 'refund')
+                <div class="font-bold" style="font-size: 14px; margin-bottom: 5px;">STRUK REFUND</div>
+            @endif
             <div class="address">
                 Jl. Arief Rahman Hakim No. 35, Subang, Kec. Subang,<br>
                 Kabupaten Subang, Jawa Barat<br>
-                #TRX-{{ $transaction->id }}
+                {{ $transaction->id }}
             </div>
         </div>
 
@@ -176,13 +179,14 @@
 
         <table class="summary">
             <tr>
-                <td>Sub Total</td>
-                <td class="text-right">Rp {{ number_format($transaction->total_bayar, 0, ',', '.') }}</td>
+                <td>{{ $transaction->transaction_type == 'refund' ? 'Total Refund' : 'Sub Total' }}</td>
+                <td class="text-right">Rp {{ number_format(abs($transaction->total_bayar), 0, ',', '.') }}</td>
             </tr>
             <tr class="total-row font-bold">
-                <td>TOTAL</td>
-                <td class="text-right">Rp {{ number_format($transaction->total_bayar, 0, ',', '.') }}</td>
+                <td>{{ $transaction->transaction_type == 'refund' ? 'DIBAYAR KEMBALI' : 'TOTAL' }}</td>
+                <td class="text-right">Rp {{ number_format(abs($transaction->total_bayar), 0, ',', '.') }}</td>
             </tr>
+            @if($transaction->transaction_type != 'refund')
             <tr>
                 <td>Bayar (Cash)</td>
                 <td class="text-right">Rp {{ number_format($transaction->uang_diterima, 0, ',', '.') }}</td>
@@ -191,14 +195,21 @@
                 <td>Kembali</td>
                 <td class="text-right">Rp {{ number_format($transaction->uang_kembali, 0, ',', '.') }}</td>
             </tr>
+            @endif
         </table>
 
         <div class="dashed-line"></div>
 
         <div class="footer text-center">
-            <p>Terima Kasih Sudah Mempercayai kami
-                <div class="e-receipt">Semoga Ilmu yang di dapat Bermanfaat</div>
-            </p>
+            @if($transaction->transaction_type == 'refund')
+                <p>Tanda Terima Pengembalian Dana
+                    <div class="e-receipt">Harap simpan struk ini sebagai bukti refund</div>
+                </p>
+            @else
+                <p>Terima Kasih Sudah Mempercayai kami
+                    <div class="e-receipt">Semoga Ilmu yang di dapat Bermanfaat</div>
+                </p>
+            @endif
         </div>
     </div>
 </body>

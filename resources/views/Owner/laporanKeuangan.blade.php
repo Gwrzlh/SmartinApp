@@ -112,7 +112,7 @@
                             </td>
                             <td class="px-6 py-4">
                                 <span class="font-bold text-indigo-600 bg-indigo-50/50 px-2 py-1.5 rounded-lg text-xs tracking-wide">
-                                    #TRX-{{ $transaction->id }}
+                                    {{ $transaction->id }}
                                 </span>
                             </td>
                             <td class="px-6 py-4 text-slate-600 whitespace-nowrap">

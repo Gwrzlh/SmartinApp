@@ -1,6 +1,23 @@
 @extends('layouts.Kasir')
 
 @section('content')
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<style>
+    .loading-spinner {
+        width: 14px;
+        height: 14px;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-radius: 50%;
+        border-top-color: white;
+        animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+    .custom-scroll::-webkit-scrollbar { width: 3px; }
+    .custom-scroll::-webkit-scrollbar-track { background: transparent; }
+    .custom-scroll::-webkit-scrollbar-thumb { background: #E5E7EB; border-radius: 10px; }
+</style>
 <div class="h-screen bg-[#F8F9FA] overflow-hidden flex flex-col p-4 font-sans text-gray-700">
     
     {{-- Alerts Area --}}
@@ -224,14 +241,31 @@
                                             Pembayaran Selesai
                                         </div>
                                     @else
-                                        <form action="{{ route('kasir.cart.add') }}" method="POST" class="mt-auto">
-                                            @csrf
-                                            <input type="hidden" name="type" value="spp">
-                                            <input type="hidden" name="id" value="{{ $enrollment->id }}">
-                                            <input type="hidden" name="name" value="SPP - {{ $enrollment->bundling->bundling_name ?? '' }} (S.d: {{ ($expiredDate ?? now())->copy()->addMonth()->format('d M Y') }})">
-                                            <input type="hidden" name="price" value="{{ $enrollment->bundling->bundling_price ?? 0 }}">
-                                            <button class="w-full py-2 bg-blue-50 hover:bg-blue-500 hover:text-white text-blue-600 rounded-lg text-[10px] font-semibold uppercase tracking-wider transition-all">Bayar SPP (+1 Bulan)</button>
-                                        </form>
+                                        <div class="flex flex-col gap-2 mt-auto">
+                                            <form action="{{ route('kasir.cart.add') }}" method="POST">
+                                                @csrf
+                                                <input type="hidden" name="type" value="spp">
+                                                <input type="hidden" name="id" value="{{ $enrollment->id }}">
+                                                <input type="hidden" name="name" value="SPP - {{ $enrollment->bundling->bundling_name ?? '' }} (S.d: {{ ($expiredDate ?? now())->copy()->addMonth()->format('d M Y') }})">
+                                                <input type="hidden" name="price" value="{{ $enrollment->bundling->bundling_price ?? 0 }}">
+                                                <button class="w-full py-2 bg-blue-50 hover:bg-blue-500 hover:text-white text-blue-600 rounded-lg text-[10px] font-semibold uppercase tracking-wider transition-all">Bayar SPP (+1 Bulan)</button>
+                                            </form>
+
+                                            {{-- TOMBOL BATAL & REFUND 50% (Hanya Muncul Jika Belum Mulai) --}}
+                                            @php
+                                                $bStart = $enrollment->bundling->start_date ?? null;
+                                                $isBelumMulai = $bStart && \Carbon\Carbon::parse($bStart)->isAfter(now());
+                                            @endphp
+                                            @if($isBelumMulai)
+                                                <form action="{{ route('kasir.enrollments.cancel', $enrollment->id) }}" method="POST" onsubmit="return confirm('Konfirmasi Pembatalan: Apakah Anda yakin ingin membatalkan pendaftaran ini? Sistem akan memotong 50% harga sebagai pinalti dan mengembalikan sisa dana.')">
+                                                    @csrf
+                                                    <button type="submit" class="w-full py-2 bg-white border border-rose-200 text-rose-500 rounded-lg text-[9px] font-bold uppercase hover:bg-rose-500 hover:text-white hover:border-transparent transition-all shadow-sm flex items-center justify-center gap-1.5">
+                                                        <x-akar-cross class="w-3" />
+                                                        Batal & Refund 50%
+                                                    </button>
+                                                </form>
+                                            @endif
+                                        </div>
                                     @endif
                                 </div>
                             @empty
@@ -325,7 +359,7 @@
                     <div class="space-y-3 bg-gray-50/50 p-4 rounded-xl border border-gray-100">
                         <div class="flex items-center justify-between">
                             <label class="text-[11px] text-gray-500 font-medium">Uang Diterima</label>
-                            <input type="number" id="paid_amount" placeholder="0" 
+                            <input type="number" id="paid_amount" placeholder="0" max="100000000"
                                    class="w-32 bg-transparent border-b border-gray-300 focus:border-blue-500 outline-none py-0.5 text-right text-sm transition-all font-medium">
                         </div>
                         <div class="flex items-center justify-between text-[11px]">
@@ -334,13 +368,14 @@
                         </div>
                     </div>
 
-                    <form action="{{ route('kasir.checkout') }}" method="POST">
+                    <form id="checkoutForm" action="{{ route('kasir.checkout') }}" method="POST" onsubmit="return handleCheckout(event)">
                         @csrf
                         <input type="hidden" name="paid_amount" id="final_paid_amount">
                         <button id="checkoutBtn" type="submit" 
-                                class="w-full py-4 bg-gray-900 hover:bg-black text-white rounded-xl text-xs font-semibold uppercase tracking-[0.2em] transition-all shadow-md active:scale-95 disabled:opacity-30 disabled:grayscale disabled:cursor-not-allowed"
+                                class="w-full py-4 bg-gray-900 hover:bg-black text-white rounded-xl text-xs font-semibold uppercase tracking-[0.2em] transition-all shadow-md active:scale-95 disabled:opacity-30 disabled:grayscale disabled:cursor-not-allowed flex items-center justify-center gap-2"
                                 {{ !$selectedStudent || count($cart)==0 ? 'disabled' : '' }}>
-                            Checkout & Bayar
+                            <span id="btnText">Checkout & Bayar</span>
+                            <div id="btnLoader" class="hidden loading-spinner"></div>
                         </button>
                     </form>
                 </div>
@@ -404,11 +439,6 @@
 @include('Kasir.modal.createSiswa')
 @include('Kasir.modal.editSiswa')
 
-<style>
-    .custom-scroll::-webkit-scrollbar { width: 3px; }
-    .custom-scroll::-webkit-scrollbar-track { background: transparent; }
-    .custom-scroll::-webkit-scrollbar-thumb { background: #E5E7EB; border-radius: 10px; }
-</style>
 
 <script>
     const totalAmount = {{ $totalAmount ?? 0 }};
@@ -418,12 +448,65 @@
     const btnCheckout = document.getElementById('checkoutBtn');
 
     inputPaid.addEventListener('input', (e) => {
-        const value = parseFloat(e.target.value) || 0;
+        let value = parseFloat(e.target.value) || 0;
+        
+        // Batasi nominal maksimal 100jt
+        if (value > 100000000) {
+            value = 100000000;
+            e.target.value = 100000000;
+        }
+
         const change = value - totalAmount;
         displayChange.innerText = 'Rp ' + new Intl.NumberFormat('id-ID').format(change > 0 ? change : 0);
         finalPaid.value = value;
         btnCheckout.disabled = (value < totalAmount) || (totalAmount === 0);
     });
+
+    function handleCheckout(event) {
+        const paidValue = parseFloat(inputPaid.value) || 0;
+        
+        // Validasi Akhir
+        if (paidValue < totalAmount) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Pembayaran Kurang',
+                text: 'Uang diterima tidak boleh kurang dari total pembayaran!',
+                confirmButtonColor: '#111827'
+            });
+            return false;
+        }
+
+        if (paidValue > 100000000) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Nominal Terlalu Besar',
+                text: 'Maksimum input uang diterima adalah Rp 100.000.000',
+                confirmButtonColor: '#111827'
+            });
+            return false;
+        }
+
+        // Tampilkan State Loading
+        const btn = document.getElementById('checkoutBtn');
+        const text = document.getElementById('btnText');
+        const loader = document.getElementById('btnLoader');
+
+        btn.disabled = true;
+        text.innerText = 'Memproses...';
+        loader.classList.remove('hidden');
+        loader.classList.add('inline-block');
+
+        Swal.fire({
+            title: 'Memproses Transaksi...',
+            text: 'Mohon tunggu sebentar, sistem sedang menyimpan data.',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
+        return true;
+    }
 
     window.students = @json($students ?? []);
     

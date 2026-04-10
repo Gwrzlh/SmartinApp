@@ -41,26 +41,40 @@ class DashboardController extends Controller
                 }
             }
 
-            // --- 2. STATISTIK KASIR ---
+            // --- 2. STATISTIK KASIR (BULANAN) ---
             $data = [
-                // Total uang masuk dari transaksi 'paid' hari ini
-                'incomeToday' => \App\Models\transactions::whereDate('created_at', $todayDate)
+                // Income Bulan Ini (Lunas)
+                'incomeMonth' => \App\Models\transactions::whereMonth('created_at', now()->month)
+                                    ->whereYear('created_at', now()->year)
                                     ->where('status_pembayaran', 'paid')
                                     ->sum('total_bayar'),
                 
-                // Jumlah transaksi sukses hari ini
-                'todayTransactions' => \App\Models\transactions::whereDate('created_at', $todayDate)->count(),
+                // Income Hari Ini
+                'incomeToday' => \App\Models\transactions::whereDate('created_at', now()->toDateString())
+                                    ->where('status_pembayaran', 'paid')
+                                    ->sum('total_bayar'),
+
+                // Jumlah transaksi bulan ini
+                'monthTransactions' => \App\Models\transactions::whereMonth('created_at', now()->month)
+                                        ->whereYear('created_at', now()->year)->count(),
                 
-                // Siswa yang perlu ditagih (Inactive)
-                'inactiveCount' => \App\Models\students::where('status', 'inactive')->count(),
-                
-                // Total Siswa Aktif
+                // Siswa Aktif (Sedang Belajar)
                 'activeCount' => \App\Models\students::where('status', 'active')->count(),
 
-                // Jumlah siswa yang berstatus graduated_debt (lulus tapi nunggak)
-                'graduatedDebtCount' => \App\Models\enrollments::where('status_pembelajaran', 'graduated_debt')
-                    ->distinct('student_id')->count('student_id'),
+                // Siswa yang Menunggak SPP (logic dari user: punya enrollment aktif tapi expired_at lewat ATAU graduated_debt)
+                'debtCount' => \App\Models\students::whereHas('enrollments', function($q) {
+                    $q->where(function($sub) {
+                        $sub->where('status_pembelajaran', 'active')
+                            ->where('expired_at', '<', now()->toDateString());
+                    })->orWhere('status_pembelajaran', 'graduated_debt');
+                })->count(),
             ];
+
+            // --- 2B. TRANSAKSI TERBARU ---
+            $recentTransactions = \App\Models\transactions::with(['details.enrollment.student'])
+                ->latest()
+                ->limit(5)
+                ->get();
 
             // --- 2B. DATA PIUTANG (untuk widget tunggakan) ---
             // Total piutang dari siswa yang sudah lulus tapi masih nunggak SPP.
@@ -124,6 +138,7 @@ class DashboardController extends Controller
                 'officeStatus'        => 'Open',
                 'totalPiutangLulusan' => $totalPiutangLulusan,
                 'topDebtors'          => $topDebtors,
+                'recentTransactions'  => $recentTransactions,
             ], $data));
         }
 }

@@ -85,12 +85,20 @@ class SubjectsController extends Controller
             
             return response()->json([
                 'success' => true,
-                'message' => 'Mata Pelajaran dan data terkait (Jadwal, dll) berhasil dihapus.'
+                'message' => 'Mata Pelajaran berhasil dihapus.'
             ]);
+        } catch (\Illuminate\Database\QueryException $e) {
+            if ($e->getCode() === "23000" || str_contains($e->getMessage(), '1451')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Gagal menghapus: Mata Pelajaran ini masih terdaftar dalam program Bundling. Silakan hapus program bundling terkait terlebih dahulu.'
+                ], 422);
+            }
+            throw $e;
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Gagal menghapus Mata Pelajaran: ' . $e->getMessage()
+                'message' => 'Terjadi kesalahan sistem: ' . $e->getMessage()
             ], 500);
         }
     }

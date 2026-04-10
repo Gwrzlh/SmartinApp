@@ -20,15 +20,11 @@ class transactionController extends Controller
     public function index(Request $request)
     {
         $cashierName = Auth::user()->full_name ?? Auth::user()->name ?? 'Kasir';
-
-        // Auto-update enrollments yang sudah melewati masa aktif menjadi inactive
-        // CATATAN: Tidak mengubah 'graduated_debt' agar tetap bisa ditagih
         enrollments::where('status_pembelajaran', 'active')
             ->where('expired_at', '<', now()->toDateString())
             ->update(['status_pembelajaran' => 'inactive']);
 
-        // Ganti loop $activeSiswa yang lama dengan ini:
-        $allStudents = students::all(); // Cek semua siswa agar bisa 're-activate' otomatis
+        $allStudents = students::all();
         foreach ($allStudents as $student) {
             if ($student->isGraduatedWithDebt()) {
                 continue;
@@ -106,7 +102,7 @@ class transactionController extends Controller
             ->when($request->filled('q_student'), function ($q) use ($request) {
                 $q->where('student_name', 'like', '%' . $request->q_student . '%');
             })
-            ->orderBy('student_name')
+            ->latest()
             ->get();
 
         $bundlings = [];
@@ -134,8 +130,8 @@ class transactionController extends Controller
         if ($selectedStudent && $mode == 'spp') {
             $studentEnrollments = enrollments::where('student_id', $selectedStudent->id)
                 ->where('item_type', 'bundling')
-                // Tampilkan semua yang belum Lulus (termasuk yang 'inactive')
-                ->whereNotIn('status_pembelajaran', ['graduated', 'Lulus']) 
+                // Jangan tampilkan yang sudah Lulus, Graduated, atau Keluar
+                ->whereNotIn('status_pembelajaran', ['graduated', 'Lulus', 'Keluar']) 
                 ->with('bundling')
                 ->get()
                 ->filter(function($enrollment) {
@@ -240,10 +236,11 @@ class transactionController extends Controller
         session(['selected_student' => $studentId]);
 
         $student = students::find($studentId);
-        $hasEnrollment = enrollments::where('student_id',$studentId)->exists();
+        $hasEverBeenEnrolled = enrollments::withTrashed()->where('student_id', $studentId)->exists();
+            
         $cart = session()->get('cart', []);
 
-        if(!$hasEnrollment){
+        if(!$hasEverBeenEnrolled){
             $registrationExists = collect($cart)->where('type','registration')->count();
             if($registrationExists == 0){
                 $cart[] = [
@@ -427,20 +424,33 @@ class transactionController extends Controller
 
     public function generateInvoice($id)
     {
-         $transaction = transactions::with(['details', 'user'])->findOrFail($id);
+        $transaction = transactions::with(['details', 'user'])->findOrFail($id);
         $student = null;
-        foreach($transaction->details as $detail) {
-            if ($detail->item_type == 'spp') {
-                $enrollment = enrollments::with('student')->find($detail->item_id);
+
+        // Jika transaksi tipe refund, cari pendaftaran terkait untuk mendapatkan data siswa
+        if ($transaction->transaction_type == 'refund') {
+            $refundDetail = $transaction->details->where('item_type', 'refund_50')->first();
+            if ($refundDetail) {
+                $enrollment = enrollments::withTrashed()->with('student')->find($refundDetail->item_id);
                 if ($enrollment && $enrollment->student) {
                     $student = $enrollment->student;
-                    break;
                 }
-            } else {
-                $enrollment = enrollments::where('transaction_detail_id', $detail->id)->with('student')->first();
-                if($enrollment && $enrollment->student) {
-                    $student = $enrollment->student;
-                    break;
+            }
+        } else {
+            // Logika pencarian siswa untuk transaksi pembayaran biasa
+            foreach($transaction->details as $detail) {
+                if ($detail->item_type == 'spp') {
+                    $enrollment = enrollments::with('student')->find($detail->item_id);
+                    if ($enrollment && $enrollment->student) {
+                        $student = $enrollment->student;
+                        break;
+                    }
+                } else {
+                    $enrollment = enrollments::where('transaction_detail_id', $detail->id)->with('student')->first();
+                    if($enrollment && $enrollment->student) {
+                        $student = $enrollment->student;
+                        break;
+                    }
                 }
             }
         }
@@ -487,5 +497,93 @@ class transactionController extends Controller
             ->paginate(10)->withQueryString();
 
         return view('Kasir.riwayatTransaksi', compact('transactions'));
+    }
+
+    /**
+     * Membatalkan Pendaftaran (Refund 50%)
+     * Hanya berlaku jika program belum dimulai.
+     */
+    public function cancelEnrollment(Request $request, enrollments $enrollment)
+    {
+        // 1. Validasi: Apakah program sudah dimulai?
+        $today = now()->toDateString();
+        $startDate = null;
+
+        if ($enrollment->item_type == 'bundling') {
+            $startDate = $enrollment->bundling->start_date ?? null;
+        } else {
+            $startDate = $enrollment->subject->bundling->start_date ?? null; // Jika ada parent bundling
+        }
+
+        if ($startDate && $startDate <= $today) {
+            return back()->with('error', 'Gagal Batal: Program sudah dimulai. Gunakan fitur "Keluar" di detail siswa.');
+        }
+
+        DB::beginTransaction();
+        try {
+            // 2. Hitung Refund 50% dari harga pendaftaran asli
+            $originalPrice = $enrollment->transaction_detail->price ?? 0;
+            $refundAmount = $originalPrice * 0.5;
+
+            // 3. Buat Transaksi Refund Baru
+            $refundTransaction = transactions::create([
+                'user_id' => Auth::id(),
+                'tgl_bayar' => now(),
+                'total_bayar' => $refundAmount,
+                'uang_diterima' => 0,
+                'uang_kembali' => $refundAmount,
+                'status_pembayaran' => 'paid',
+                'transaction_type' => 'refund'
+            ]);
+
+            // Catat detail refund
+            transaction_details::create([
+                'transaction_id' => $refundTransaction->id,
+                'item_type' => 'refund_50',
+                'item_id' => $enrollment->id,
+                'price' => -$refundAmount // Nilai negatif untuk laporan keuangan
+            ]);
+
+            // 4. Soft Delete Enrollment
+            $studentName = $enrollment->student->student_name ?? 'Siswa';
+            $programName = ($enrollment->item_type == 'bundling') ? ($enrollment->bundling->bundling_name ?? 'Paket') : ($enrollment->subject->mapel_name ?? 'Mapel');
+            
+            $enrollment->delete();
+
+            logActivity('Membatalkan Pendaftaran (Refund 50%)', "Siswa: {$studentName}, Program: {$programName}, Refund: Rp".number_format($refundAmount, 0, ',', '.'));
+
+            DB::commit();
+
+            return redirect()->route('kasir.transaction', ['print_invoice' => $refundTransaction->id])
+                             ->with('success', "Pendaftaran '{$programName}' berhasil dibatalkan. Dana refund: Rp".number_format($refundAmount, 0, ',', '.'));
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', 'Gagal memproses pembatalan: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Menghentikan Siswa di Tengah Jalan (Status Keluar)
+     * Tanpa refund, tagihan SPP berhenti.
+     */
+    public function quitEnrollment(Request $request, enrollments $enrollment)
+    {
+        try {
+            $studentName = $enrollment->student->student_name ?? 'Siswa';
+            $programName = ($enrollment->item_type == 'bundling') ? ($enrollment->bundling->bundling_name ?? 'Paket') : ($enrollment->subject->mapel_name ?? 'Mapel');
+
+            $enrollment->update([
+                'status_pembelajaran' => 'Keluar',
+                'finish_at' => now()
+            ]);
+
+            logActivity('Siswa Keluar/Berhenti Tengah Jalan', "Siswa: {$studentName}, Program: {$programName}");
+
+            return back()->with('success', "Siswa '{$studentName}' telah dinyatakan Keluar dari program '{$programName}'. Tagihan SPP akan otomatis berhenti.");
+
+        } catch (\Exception $e) {
+            return back()->with('error', 'Gagal memproses status keluar: ' . $e->getMessage());
+        }
     }
 }

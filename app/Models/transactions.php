@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class transactions extends Model
 {
     protected $table = 'transactions';
-    protected $fillable = ['user_id','tgl_bayar','total_bayar','uang_diterima','uang_kembali','status_pembayaran'];
+    protected $fillable = ['user_id','tgl_bayar','total_bayar','uang_diterima','uang_kembali','status_pembayaran', 'transaction_type'];
 
     protected $casts = [
         'tgl_bayar' => 'date',

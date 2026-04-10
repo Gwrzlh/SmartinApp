@@ -12,7 +12,7 @@
                         <x-akar-reciept class="w-6 h-6"/>
                     </div>
                     <div>
-                        <h3 class="text-xl font-bold text-gray-800" id="detail_trx_id">#TRX-000</h3>
+                        <h3 class="text-xl font-bold text-gray-800" id="detail_trx_id">000</h3>
                         <p class="text-sm text-gray-500" id="detail_trx_date">-- -- ----, --:--</p>
                     </div>
                 </div>
@@ -95,7 +95,7 @@ function openDetailTrxModal(trxId) {
     if (!trx) return;
 
     // Fill Basic Info
-    document.getElementById('detail_trx_id').innerText = '#TRX-' + trx.id;
+    document.getElementById('detail_trx_id').innerText =trx.id;
     document.getElementById('detail_trx_date').innerText = new Date(trx.tgl_bayar).toLocaleString('id-ID', {
         day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
     });

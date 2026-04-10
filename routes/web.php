@@ -16,12 +16,12 @@ use App\Http\Controllers\OwnerController;
 // =========================================
 // PUBLIC ROUTES (Tidak perlu login)
 // =========================================
-Route::get('/', function () {
-    return view('welcome');
-})->name('home');
+// Route::get('/', function () {
+//     return view('welcome');
+// })->name('home');
 
 Route::middleware('guest')->group(function () {
-    Route::get('login', [authController::class, 'index'])->name('login');
+    Route::get('/', [authController::class, 'index'])->name('login');
     Route::post('login', [authController::class, 'doLogin'])
         ->name('login.post')
         ->middleware('throttle:5,1'); 
@@ -114,6 +114,12 @@ Route::middleware('auth')->group(function () {
                 ->name('kasir.schedules.available');
             Route::post('/schedules-manage/reschedule', [\App\Http\Controllers\SchedulePlacementController::class, 'reschedule'])
                 ->name('kasir.schedules.reschedule');
+
+            // Route Baru untuk Pembatalan (Refund) dan Keluar (Stop SPP)
+            Route::post('/enrollments/{enrollment}/cancel', [transactionController::class, 'cancelEnrollment'])
+                ->name('kasir.enrollments.cancel');
+            Route::post('/enrollments/{enrollment}/quit', [transactionController::class, 'quitEnrollment'])
+                ->name('kasir.enrollments.quit');
 
         });
     });

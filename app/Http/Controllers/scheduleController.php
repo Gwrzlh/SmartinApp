@@ -51,21 +51,31 @@ class scheduleController extends Controller
             'jam_mulai' => 'required',
             'jam_selesai' => 'required|after:jam_mulai',
             'ruangan' => 'required',
-            // 'capacity' => 'required|integer|min:1',
+            'is_active' => 'required|boolean',
         ]);
 
-        // Cek Bentrok Mentor (Mentor tidak boleh mengajar di jam yang sama)
-        $isBentrok = schedules::where('mentor_id', $request->mentor_id)
+        // 1. Cek Bentrok Mentor
+        $isBentrokMentor = schedules::where('mentor_id', $request->mentor_id)
             ->where('hari', $request->hari)
             ->where(function($query) use ($request) {
-                $query->where(function($q) use ($request) {
-                    $q->where('jam_mulai', '<', $request->jam_selesai)
-                    ->where('jam_selesai', '>', $request->jam_mulai);
-                });
+                $query->where('jam_mulai', '<', $request->jam_selesai)
+                      ->where('jam_selesai', '>', $request->jam_mulai);
             })->exists();
 
-        if ($isBentrok) {
-            return back()->with('error', 'Jadwal bentrok! Mentor tersebut sudah memiliki jadwal di jam yang sama.')->withInput();
+        if ($isBentrokMentor) {
+            return back()->with('error', 'Jadwal bentrok! Mentor tersebut sudah memiliki jadwal di jam dan hari yang sama.')->withInput();
+        }
+
+        // 2. Cek Bentrok Ruangan
+        $isBentrokRuangan = schedules::where('ruangan', $request->ruangan)
+            ->where('hari', $request->hari)
+            ->where(function($query) use ($request) {
+                $query->where('jam_mulai', '<', $request->jam_selesai)
+                      ->where('jam_selesai', '>', $request->jam_mulai);
+            })->exists();
+
+        if ($isBentrokRuangan) {
+            return back()->with('error', 'Jadwal bentrok! Ruangan tersebut sudah terpakai di jam dan hari yang sama.')->withInput();
         }
 
         schedules::create($request->all());
@@ -97,23 +107,35 @@ class scheduleController extends Controller
             'jam_mulai' => 'required',
             'jam_selesai' => 'required|after:jam_mulai',
             'ruangan' => 'required',
-            // 'capacity' => 'required|integer|min:1',
+            'is_active' => 'required|boolean',
         ]);
 
-        // check conflict excluding the current schedule
-        $isBentrok = schedules::where('mentor_id', $request->mentor_id)
+        // 1. Cek Bentrok Mentor (Excluding current id)
+        $isBentrokMentor = schedules::where('mentor_id', $request->mentor_id)
             ->where('hari', $request->hari)
             ->where(function($query) use ($request) {
-                $query->where(function($q) use ($request) {
-                    $q->where('jam_mulai', '<', $request->jam_selesai)
+                $query->where('jam_mulai', '<', $request->jam_selesai)
                       ->where('jam_selesai', '>', $request->jam_mulai);
-                });
             })
             ->where('id', '<>', $id)
             ->exists();
 
-        if ($isBentrok) {
-            return back()->with('error', 'Jadwal bentrok! Mentor tersebut sudah memiliki jadwal di jam yang sama.')->withInput();
+        if ($isBentrokMentor) {
+            return back()->with('error', 'Jadwal bentrok! Mentor tersebut sudah memiliki jadwal di jam dan hari yang sama.')->withInput();
+        }
+
+        // 2. Cek Bentrok Ruangan (Excluding current id)
+        $isBentrokRuangan = schedules::where('ruangan', $request->ruangan)
+            ->where('hari', $request->hari)
+            ->where(function($query) use ($request) {
+                $query->where('jam_mulai', '<', $request->jam_selesai)
+                      ->where('jam_selesai', '>', $request->jam_mulai);
+            })
+            ->where('id', '<>', $id)
+            ->exists();
+
+        if ($isBentrokRuangan) {
+            return back()->with('error', 'Jadwal bentrok! Ruangan tersebut sudah terpakai di jam dan hari yang sama.')->withInput();
         }
 
         $schedule->update($request->all());
@@ -152,19 +174,38 @@ class scheduleController extends Controller
     public function destroy($id)
     {
         try {
-            $schedule = schedules::findOrFail($id);
+            $schedule = schedules::with('bundling')->findOrFail($id);
+            
+            // 1. Validasi: Apakah program bundling-nya sudah mulai?
+            $today = now()->toDateString();
+            if ($schedule->bundling && $schedule->bundling->start_date && $schedule->bundling->start_date <= $today) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Gagal menghapus: Jadwal tidak bisa dihapus karena program kursus sudah dimulai.'
+                ], 422);
+            }
+
+            // 2. Validasi: Apakah sudah ada siswa di jadwal ini?
+            $hasSiswa = \App\Models\EnrollmentSchedule::where('schedule_id', $id)->exists();
+            if ($hasSiswa) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Gagal menghapus: Sudah ada siswa yang terdaftar pada jadwal ini.'
+                ], 422);
+            }
+
             $schedule->delete();
 
             logActivity('Menghapus Jadwal Kelas');
 
             return response()->json([
                 'success' => true,
-                'message' => 'Jadwal dan data terkait berhasil dihapus secara permanen.'
+                'message' => 'Jadwal berhasil dihapus secara permanen.'
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Gagal menghapus jadwal: ' . $e->getMessage()
+                'message' => 'Terjadi kesalahan sistem: ' . $e->getMessage()
             ], 500);
         }
     }
