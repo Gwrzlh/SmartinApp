@@ -16,7 +16,8 @@ class UserController extends Controller
                         ->orWhere('email', 'like', "%{$search}%")
                         ->orWhere('full_name', 'like', "%{$search}%");
         })
-        ->paginate(5) // Menampilkan 10 data per halaman
+        ->latest()
+        ->paginate(5)
         ->withQueryString();
         return view('Admin.Users.index', compact('users'));
     }
@@ -30,8 +31,13 @@ class UserController extends Controller
             'username'  => 'required|unique:users,username',
             'full_name' => 'required',
             'email'     => 'required|email|unique:users,email',
-            'password'  => 'required|min:6',
+            'password'  => 'required|min:6|confirmed',
             'role'      => 'required|in:admin,kasir,owner', 
+            
+        ],
+        [
+            'password.confirmed' => 'Konfirmasi password tidak sesuai dengan password utama.',
+    
         ]);
 
 
@@ -63,10 +69,14 @@ class UserController extends Controller
         $request->validate([
             'full_name' => 'required',
             'email' => 'required|email|unique:users,email,' . $user->id,
-            'password' => 'nullable|min:6',
+            'password' => 'nullable|min:6|confirmed',
             'username' => 'required|unique:users,username,' . $user->id,
             // 'is_active' => 'required|boolean',
-        ]);
+        ],
+        [
+            'password.confirmed' => 'Konfirmasi password tidak sesuai dengan password utama.',
+    
+    ]);
         $isActive = $request->has('active') ? 1 : 0;
         $user->update([
             'full_name' => $request->full_name,

@@ -84,7 +84,7 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div class="space-y-2">
                             <label for="password" class="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Password</label>
-                            <input type="password" name="password" id="password" 
+                            <input type="password" name="password" id="password" required
                                 class="block w-full px-4 py-3 rounded-xl border-2 border-gray-100 bg-gray-50/50 text-gray-700 transition-all 
                                 focus:bg-white focus:border-red-500 focus:ring-4 focus:ring-red-500/10 outline-none placeholder:text-gray-300" 
                                 placeholder="••••••••">
@@ -92,10 +92,11 @@
                         </div>
 
                         <div class="space-y-2">
-                            <label for="confirm_password" class="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Konfirmasi Password</label>
-                            <input type="password" name="confirm_password" id="confirm_password" 
-                                class="block w-full px-4 py-3 rounded-xl border-2 border-gray-100 bg-gray-50/50 text-gray-700 transition-all 
-                                focus:bg-white focus:border-cyan-500 focus:ring-4 focus:ring-cyan-500/10 outline-none placeholder:text-gray-300" 
+                            <label for="password_confirmation" class="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Konfirmasi Password</label>
+                            <input type="password" 
+                                name="password_confirmation"
+                                id="password_confirmation" required
+                                class="block w-full px-4 py-3 rounded-xl border-2 border-gray-100 bg-gray-50/50 text-gray-700 transition-all focus:bg-white focus:border-cyan-500 focus:ring-4 focus:ring-cyan-500/10 outline-none placeholder:text-gray-300" 
                                 placeholder="••••••••">
                         </div>
                     </div>
@@ -107,6 +108,7 @@
                                 class="block w-full px-4 py-3 rounded-xl border-2 border-gray-100 bg-gray-50/50 text-gray-700 transition-all 
                                 focus:bg-white focus:border-cyan-500 outline-none appearance-none cursor-pointer">
                                 <option value="" disabled selected>Pilih hak akses...</option>
+                                <option value="owner">Owner</option>
                                 <option value="admin">Administrator</option>
                                 <option value="kasir">Staff Kasir</option>
                             </select>
@@ -162,6 +164,23 @@
         const form = document.getElementById('userForm');
         const submitBtn = document.getElementById('submitBtn');
         const submitText = document.getElementById('submitText');
+        const password = document.getElementById('password').value;
+        const confirmPassword = document.getElementById('password_confirmation').value;
+
+        // Validasi Konfirmasi Password
+        if (password !== confirmPassword) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Password Tidak Cocok!',
+                text: 'Harap pastikan konfirmasi password sama dengan password yang Anda masukkan.',
+                confirmButtonColor: '#06b6d4',
+                customClass: {
+                    popup: 'rounded-3xl',
+                    confirmButton: 'rounded-xl px-6 py-2'
+                }
+            });
+            return;
+        }
         
         // Validate form
         if (!form.checkValidity()) {

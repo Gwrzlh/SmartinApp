@@ -15,6 +15,7 @@ class CategoryController extends Controller
         $categories = categories::when($search, function ($query) use ($search) {
             return $query->where('category_name', 'like', "%{$search}%");
         })
+        ->latest()
         ->paginate(5)
         ->withQueryString();
 
@@ -68,7 +69,7 @@ class CategoryController extends Controller
             ], 200);
 
         } catch (\Illuminate\Database\QueryException $e) {
-            // Cek jika error disebabkan oleh Restrict Constraint (SQLState 23000)
+            // Cek jika error disebabkan oleh Restrict Constraint
             if ($e->getCode() === "23000" || str_contains($e->getMessage(), '1451')) {
                 return response()->json([
                     'success' => false,

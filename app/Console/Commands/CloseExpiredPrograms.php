@@ -34,7 +34,6 @@ class CloseExpiredPrograms extends Command
         $this->info('Memulai pengecekan program yang kadaluwarsa...');
 
         // Cari bundling yang masih aktif tapi masa aktifnya sudah habis
-        // Rumus: start_date + duration_mounths <= hari ini
         $expiredBundlings = bundlings::where('is_active', 1)
             ->whereNotNull('start_date')
             ->whereNotNull('duration_mounths')
@@ -59,8 +58,7 @@ class CloseExpiredPrograms extends Command
                 $endDate = \Carbon\Carbon::parse($bundling->start_date)
                     ->addMonths($bundling->duration_mounths);
 
-                // 1. Ambil semua enrollment yang masih aktif/inactive untuk bundling ini
-                //    SEBELUM bundling di-nonaktifkan agar perbandingan tanggal valid
+            // mengambil semua enrollment
                 $enrollmentsToProcess = enrollments::where('item_type', 'bundling')
                     ->where('item_id', $bundling->id)
                     ->whereIn('status_pembelajaran', ['active', 'inactive'])
@@ -73,15 +71,12 @@ class CloseExpiredPrograms extends Command
                         : null;
 
                     // Perbandingan tanggal:
-                    // expired_at >= endDate → sudah bayar sampai bulan terakhir → GRADUATED
-                    // expired_at <  endDate → belum bayar penuh → INACTIVE
                     if ($expiredDate && $expiredDate->gte($endDate)) {
-                        // --- LULUS (Lunas Penuh) ---
+                        // Lulus dan lunas
                         $enrollment->update(['status_pembelajaran' => 'graduated']);
                         $totalGraduated++;
 
                         if ($student) {
-                            // Set siswa inactive hanya jika tidak ada enrollment aktif lain
                             $hasOtherActive = enrollments::where('student_id', $student->id)
                                 ->where('status_pembelajaran', 'active')
                                 ->where('id', '!=', $enrollment->id)
@@ -94,12 +89,12 @@ class CloseExpiredPrograms extends Command
                             $this->line("  [LULUS]    Siswa '{$student->student_name}' (expired: {$expiredDate->toDateString()} >= end: {$endDate->toDateString()}) → graduated");
                         }
                     } else {
-                        // --- BELUM LUNAS (Ada Tunggakan / Belum Bayar Penuh) ---
+                        // lulus tapi belum lunas
                         $enrollment->update(['status_pembelajaran' => 'inactive']);
                         $totalInactive++;
 
                         if ($student) {
-                            // Siswa tetap 'active' agar kasir bisa menagih
+                            // siswa akan di nyatakan active agar bisa menagih sisa tagihan spp
                             if ($student->status !== 'active') {
                                 $student->update(['status' => 'active']);
                             }
@@ -109,11 +104,11 @@ class CloseExpiredPrograms extends Command
                     }
                 }
 
-                // 2. SETELAH semua enrollment diproses, baru non-aktifkan bundling
+                // 2. nonaktifkan program bundling
                 $bundling->update(['is_active' => 0]);
                 $totalBundlings++;
 
-                // 3. Non-aktifkan semua jadwal terkait
+                // 3. nonaktifkan jadwal terkait
                 $affectedSchedules = schedules::where('bundling_id', $bundling->id)
                     ->where('is_active', 1)
                     ->update(['is_active' => 0]);
@@ -129,7 +124,29 @@ class CloseExpiredPrograms extends Command
                 Log::error("CloseExpiredPrograms Error: " . $e->getMessage());
             }
         }
+        $nunggakEnrollments = enrollments::where('status_pembelajaran', 'active')
+        ->where('expired_at', '<', now()->toDateString())
+        ->get();
 
+        foreach($nunggakEnrollments as $enrollment) {
+            $enrollment->update(['status_pembelajaran' => 'inactive']);
+            $this->line("  [NUNGGAK SPP] Siswa ID {$enrollment->student_id} terlambat bayar (Expired: {$enrollment->expired_at}). Status diset Inactive.");
+            
+            // Tambahkan counter ini agar tampil di tabel akhir
+            $totalInactive++;
+
+            // Nonaktifkan juga status student agar tidak bisa beli paket lain
+            $updated = students::where('id', $enrollment->student_id)
+                ->where('status', 'active')
+                ->update(['status' => 'inactive']);
+                
+            if($updated) {
+                $totalStudentsUpdated++; 
+            }
+        }
+
+
+        $this->info('Selesai!');
         $this->newLine();
         $this->info('Selesai! Ringkasan aktivitas:');
         $this->table(

@@ -9,13 +9,14 @@ use App\Models\transaction_details;
 use App\Models\transactions;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use App\Models\bundlings;
+use Carbon\Carbon;
 
 class SchedulePlacementController extends Controller
 {
     public function index(Request $request)
     {
-        $query = \App\Models\bundlings::query();
-
+        $query = bundlings::query();
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where('bundling_name', 'like', "%{$search}%");
@@ -35,19 +36,20 @@ class SchedulePlacementController extends Controller
             ->withQueryString();
 
         foreach ($programs as $bundle) {
-            $enrolledCount = \App\Models\enrollments::where('item_type', 'bundling')
+            $enrolledCount = enrollments::where('item_type', 'bundling')
                 ->where('item_id', $bundle->id)
                 ->where('status_pembelajaran', '!=', 'inactive')
                 ->count();
 
             $bundle->active_students_count = $enrolledCount;
 
-            $start = \Carbon\Carbon::parse($bundle->start_date);
-            $end = $start->copy()->addMonths($bundle->duration_mounths);
+            $start = Carbon::parse($bundle->start_date, 'Asia/Jakarta')->startOfDay();
+            $end = $start->copy()->addMonths($bundle->duration_mounths)->startOfDay();
+            $today = Carbon::now()->timezone('Asia/Jakarta')->startOfDay();
 
-            if ($start->isFuture()) {
+            if ($today->isBefore($start)) {
                 $bundle->program_status = 'Belum Mulai';
-            } elseif (now()->greaterThanOrEqualTo($end)) {
+            } elseif ($today->greaterThanOrEqualTo($end)) {
                 $bundle->program_status = 'Selesai';
             } else {
                 $bundle->program_status = 'Berjalan';
@@ -59,15 +61,15 @@ class SchedulePlacementController extends Controller
 
     public function show($id)
     {
-        $program = \App\Models\bundlings::with('details.subject')->findOrFail($id);
+        $program = bundlings::with('details.subject')->findOrFail($id);
 
-        $schedules = \App\Models\schedules::with(['subject', 'mentor'])
+        $schedules = schedules::with(['subject', 'mentor'])
             ->where('bundling_id', $id)
             ->orderBy('hari')
             ->orderBy('jam_mulai')
             ->get();
 
-        $enrollments = \App\Models\enrollments::with('student')
+        $enrollments = enrollments::with('student')
             ->where('item_type', 'bundling')
             ->where('item_id', $id)
             ->latest()
@@ -117,7 +119,7 @@ class SchedulePlacementController extends Controller
             }
 
             $enrollment = $enrollmentSchedule->enrollment;
-            if ($targetSchedule->subject_id != $enrollment->item_id) { // assuming item_id is subject_id
+            if ($targetSchedule->subject_id != $enrollment->item_id) { 
                 throw new \Exception('Jadwal tujuan harus memiliki mata pelajaran yang sama.');
             }
 

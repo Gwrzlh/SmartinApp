@@ -23,7 +23,7 @@ class OwnerController extends Controller
             $currentYear = $now->year;
             $hariIndo = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'][$now->dayOfWeek];
 
-            // --- 1. GROWTH REVENUE (Bulan Ini vs Bulan Lalu) ---
+        //    kemajuan revenue bulan ini
             $revenueThisMonth = transactions::where('status_pembayaran', 'paid')
                 ->whereMonth('created_at', $currentMonth)
                 ->whereYear('created_at', $currentYear)
@@ -42,14 +42,13 @@ class OwnerController extends Controller
                 $revenueGrowth = 100;
             }
 
-            // --- 2. TOP MENTORS (Berdasarkan jumlah jadwal) ---
+            // top mentor
             $topMentors = mentors::withCount('schedules')
                 ->orderByDesc('schedules_count')
                 ->take(5)
                 ->get();
 
-            // --- 3. TOTAL PIUTANG (Logic sama dengan Kasir) ---
-            // Mengambil semua enrollment yang nunggak (Active & Expired ATAU graduated_debt)
+        //    total spp belum di bayar
             $debtEnrollments = enrollments::with(['bundling', 'student'])
                 ->where(function($q) {
                     $q->where(function($sub) {
@@ -85,7 +84,7 @@ class OwnerController extends Controller
             usort($debtByStudent, fn($a, $b) => $b['total'] <=> $a['total']);
             $topDebtors = array_slice($debtByStudent, 0, 5);
 
-            // --- 4. TREND REVENUE (6 Bulan) ---
+        //  tren revenue per 6 bulan
             $revenueTrend = [
                 'labels' => [],
                 'data' => [],
@@ -100,12 +99,12 @@ class OwnerController extends Controller
                 $revenueTrend['data'][] = $revenue;
             }
 
-            // --- 5. ROOM OCCUPANCY & UPCOMING ---
+        //    room schedule
             $schedulesList = schedules::with(['subject', 'enrollments'])->withCount('enrollments')->get();
             $roomOccupancy = [];
             foreach ($schedulesList as $schedule) {
                 $ruangan = $schedule->ruangan;
-                $capacity = $schedule->capacity ?? 1; // Prevent division by zero
+                $capacity = $schedule->capacity ?? 1; 
                 $filled = $schedule->enrollments_count;
 
                 $roomOccupancy[] = [
@@ -273,17 +272,17 @@ class OwnerController extends Controller
     public function manajemenAsset(Request $request)
     {
         // Ambil input filter
-        $mode = $request->get('mode', 'paket'); // Default mode adalah mapel
+        $mode = $request->get('mode', 'paket'); 
         $categoryId = $request->get('category_id');
         $q_mapel = $request->get('q_mapel');
         $q_bundling = $request->get('q_bundling');
         $q_mentor = $request->get('q_mentor');
         $filter_subject_id = $request->get('filter_subject_id');
 
-        $categories = \App\Models\categories::all();
-        $allSubjects = \App\Models\subjects::all();
+        $categories = categories::all();
+        $allSubjects = subjects::all();
 
-        $bundlingsQuery = \App\Models\bundlings::with(['details.subject'])
+        $bundlingsQuery = bundlings::with(['details.subject'])
             ->withCount('enrollments');
         if ($q_bundling) {
             $bundlingsQuery->where('bundling_name', 'like', '%'.$q_bundling.'%');
@@ -306,7 +305,7 @@ class OwnerController extends Controller
             });
         }
         $mentors = $mentorsQuery->get();
-
+        
         return view('Owner.manajemanAsset', [
             'bundlings' => $bundlings,
             'mentors' => $mentors,
@@ -318,7 +317,7 @@ class OwnerController extends Controller
 
     public function logActivity(Request $request)
     {
-        $query = \App\Models\ActivityLog::with('user');
+        $query = ActivityLog::with('user');
 
         if ($request->filled('search')) {
             $search = $request->search;

@@ -13,8 +13,7 @@ class scheduleController extends Controller
 {
     public function index(Request $request)
     {
-        $subjects = subjects::all(); // Tetap ambil untuk keperluan lain jika perlu
-
+        $subjects = subjects::all(); 
         $schedules = schedules::with(['subject', 'mentor', 'bundling'])
             ->withCount('enrollments') 
                 ->when($request->search, function ($query) use ($request) {
@@ -54,7 +53,7 @@ class scheduleController extends Controller
             'is_active' => 'required|boolean',
         ]);
 
-        // 1. Cek Bentrok Mentor
+        // Cek Bentrok Mentor
         $isBentrokMentor = schedules::where('mentor_id', $request->mentor_id)
             ->where('hari', $request->hari)
             ->where(function($query) use ($request) {
@@ -66,7 +65,7 @@ class scheduleController extends Controller
             return back()->with('error', 'Jadwal bentrok! Mentor tersebut sudah memiliki jadwal di jam dan hari yang sama.')->withInput();
         }
 
-        // 2. Cek Bentrok Ruangan
+        // Cek Bentrok Ruangan
         $isBentrokRuangan = schedules::where('ruangan', $request->ruangan)
             ->where('hari', $request->hari)
             ->where(function($query) use ($request) {
@@ -110,7 +109,7 @@ class scheduleController extends Controller
             'is_active' => 'required|boolean',
         ]);
 
-        // 1. Cek Bentrok Mentor (Excluding current id)
+        // Cek Bentrok Mentor berdasarkan id
         $isBentrokMentor = schedules::where('mentor_id', $request->mentor_id)
             ->where('hari', $request->hari)
             ->where(function($query) use ($request) {
@@ -124,7 +123,7 @@ class scheduleController extends Controller
             return back()->with('error', 'Jadwal bentrok! Mentor tersebut sudah memiliki jadwal di jam dan hari yang sama.')->withInput();
         }
 
-        // 2. Cek Bentrok Ruangan (Excluding current id)
+        // Cek Bentrok Ruangan berdasarkan id
         $isBentrokRuangan = schedules::where('ruangan', $request->ruangan)
             ->where('hari', $request->hari)
             ->where(function($query) use ($request) {
@@ -147,9 +146,7 @@ class scheduleController extends Controller
 
     public function getSubjectsByMentor($mentorId)
     {
-        // Asumsi: Mentor memiliki relasi 'subjects' melalui tabel pivot
-        $mentor = \App\Models\mentors::with('subjects')->findOrFail($mentorId);
-        
+        $mentor = mentors::with('subjects')->findOrFail($mentorId);
         return response()->json($mentor->subjects);
     }
     public function show($id)
@@ -176,7 +173,7 @@ class scheduleController extends Controller
         try {
             $schedule = schedules::with('bundling')->findOrFail($id);
             
-            // 1. Validasi: Apakah program bundling-nya sudah mulai?
+            //  validasi cek apakah program sudah mulai
             $today = now()->toDateString();
             if ($schedule->bundling && $schedule->bundling->start_date && $schedule->bundling->start_date <= $today) {
                 return response()->json([
@@ -185,7 +182,7 @@ class scheduleController extends Controller
                 ], 422);
             }
 
-            // 2. Validasi: Apakah sudah ada siswa di jadwal ini?
+            // validasi cek apakah sudah ada siswa yang daftar
             $hasSiswa = \App\Models\EnrollmentSchedule::where('schedule_id', $id)->exists();
             if ($hasSiswa) {
                 return response()->json([
@@ -209,29 +206,23 @@ class scheduleController extends Controller
             ], 500);
         }
     }
-   public function getSubjectsByBundling($bundlingId)
-{
-    // $bundling = bundlings::with('subjects')->find($bundlingId);
-    $bundling = bundlings::where('id', $bundlingId)->first();
-    
-    if (!$bundling) {
-        return response()->json([]); // Kembalikan array kosong jika tidak ketemu
+    public function getSubjectsByBundling($bundlingId)
+    {
+        $bundling = bundlings::where('id', $bundlingId)->first();
+        
+        if (!$bundling) {
+            return response()->json([]); 
+        }
+        return response()->json($bundling->subjects); 
     }
 
-    // Ambil hanya array subjects-nya saja
-    return response()->json($bundling->subjects); 
-}
+    public function getMentorsBySubject($subjectId)
+    {
+        $subject = subjects::where('id', $subjectId)->first();  
 
-public function getMentorsBySubject($subjectId)
-{
-    // $subject = \App\Models\subjects::with('mentors')->find($subjectId);
-    $subject = subjects::where('id', $subjectId)->first();  
-
-    if (!$subject) {
-        return response()->json([]); 
+        if (!$subject) {
+            return response()->json([]); 
+        }
+        return response()->json($subject->mentors);
     }
-
-    // Ambil hanya array mentors-nya saja
-    return response()->json($subject->mentors);
-}
 }

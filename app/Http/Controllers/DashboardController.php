@@ -16,22 +16,18 @@ class DashboardController extends Controller
 {
         public function index()
         {
-            $todayDate = \Carbon\Carbon::now();
+            $todayDate = Carbon::now();
             $todayStr = $todayDate->translatedFormat('d F Y');
             $cashierName = Auth::user()->full_name ?? Auth::user()->name ?? 'Kasir';
             
-            // --- 1. SYNC STATUS SISWA (Logic dari Transaksi) ---
-            // Update otomatis siswa menjadi inactive jika masa kursus habis.
-            // PENGECUALIAN: Siswa yang menunggak (graduated_debt) tetap 'active'
-            // agar sistem keuangan bisa terus menagih.
-            $activeSiswa = \App\Models\students::where('status', 'active')->get();
+            
+            $activeSiswa = students::where('status', 'active')->get();
             foreach ($activeSiswa as $student) {
-                // Jika siswa punya enrollment graduated_debt, jangan ubah statusnya
                 if ($student->isGraduatedWithDebt()) {
                     continue;
                 }
 
-                $stillHasActiveCourse = \App\Models\enrollments::where('student_id', $student->id)
+                $stillHasActiveCourse = enrollments::where('student_id', $student->id)
                     ->where('status_pembelajaran', 'active')
                     ->where('expired_at', '>=', now()->toDateString())
                     ->exists();
@@ -41,45 +37,42 @@ class DashboardController extends Controller
                 }
             }
 
-            // --- 2. STATISTIK KASIR (BULANAN) ---
+            // statistik kasir perbulan
             $data = [
                 // Income Bulan Ini (Lunas)
-                'incomeMonth' => \App\Models\transactions::whereMonth('created_at', now()->month)
+                'incomeMonth' => transactions::whereMonth('created_at', now()->month)
                                     ->whereYear('created_at', now()->year)
                                     ->where('status_pembayaran', 'paid')
                                     ->sum('total_bayar'),
                 
                 // Income Hari Ini
-                'incomeToday' => \App\Models\transactions::whereDate('created_at', now()->toDateString())
+                'incomeToday' => transactions::whereDate('created_at', now()->toDateString())
                                     ->where('status_pembayaran', 'paid')
                                     ->sum('total_bayar'),
 
                 // Jumlah transaksi bulan ini
-                'monthTransactions' => \App\Models\transactions::whereMonth('created_at', now()->month)
+                'monthTransactions' => transactions::whereMonth('created_at', now()->month)
                                         ->whereYear('created_at', now()->year)->count(),
                 
                 // Siswa Aktif (Sedang Belajar)
-                'activeCount' => \App\Models\students::where('status', 'active')->count(),
+                'activeCount' => students::where('status', 'active')->count(),
 
                 // Siswa yang Menunggak SPP (logic dari user: punya enrollment aktif tapi expired_at lewat ATAU graduated_debt)
-                'debtCount' => \App\Models\students::whereHas('enrollments', function($q) {
+                'debtCount' => students::whereHas('enrollments', function($q) {
                     $q->where(function($sub) {
                         $sub->where('status_pembelajaran', 'active')
                             ->where('expired_at', '<', now()->toDateString());
                     })->orWhere('status_pembelajaran', 'graduated_debt');
                 })->count(),
             ];
-
-            // --- 2B. TRANSAKSI TERBARU ---
-            $recentTransactions = \App\Models\transactions::with(['details.enrollment.student'])
+            // transaksi terbaru
+            $recentTransactions = transactions::with(['details.enrollment.student'])
                 ->latest()
                 ->limit(5)
                 ->get();
 
-            // --- 2B. DATA PIUTANG (untuk widget tunggakan) ---
-            // Total piutang dari siswa yang sudah lulus tapi masih nunggak SPP.
-            // Dihitung dari jumlah bulan yang terlewati × harga bundling.
-            $debtEnrollments = \App\Models\enrollments::with(['bundling', 'student'])
+            //  data tunggakan  
+            $debtEnrollments = enrollments::with(['bundling', 'student'])
                 ->where('status_pembelajaran', 'graduated_debt')
                 ->whereNotNull('expired_at')
                 ->get();
@@ -111,7 +104,7 @@ class DashboardController extends Controller
             usort($debtByStudent, fn($a, $b) => $b['total'] <=> $a['total']);
             $topDebtors = array_slice($debtByStudent, 0, 5);
 
-            // --- 3. JADWAL HARI INI ---
+        //  jadwal hari ini 
             $dayMap = [
                 'Monday' => 'Senin', 'Tuesday' => 'Selasa', 'Wednesday' => 'Rabu',
                 'Thursday' => 'Kamis', 'Friday' => 'Jumat', 'Saturday' => 'Sabtu', 'Sunday' => 'Minggu'

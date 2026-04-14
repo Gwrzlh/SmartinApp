@@ -40,7 +40,7 @@ class authController extends Controller
         $user = User::where('email', $credentials['email_or_username'])
             ->orWhere('username', $credentials['email_or_username'])
             ->first();
-
+                            // mencari users
         if (!$user) {
             Log::warning('Login attempt dengan user tidak ditemukan', [
                 'identifier' => $credentials['email_or_username'],
@@ -53,7 +53,7 @@ class authController extends Controller
                 'email_or_username' => 'Email/username atau password salah.',
             ]);
         }
-
+                        // Check Password        
         if (!Hash::check($credentials['password'], $user->password)) {
             Log::warning('Login attempt dengan password salah', [
                 'user_id' => $user->id,
@@ -67,7 +67,7 @@ class authController extends Controller
                 'email_or_username' => 'Email/username atau password salah.',
             ]);
         }
-
+                        // cek status user
         if (!$user->is_active) {
             Log::warning('Login attempt user inactive', ['user_id' => $user->id]);
             throw ValidationException::withMessages([
@@ -102,8 +102,6 @@ class authController extends Controller
                 ->with('success', 'Selamat datang, ' . $user->full_name . '!'),
             'kasir' => redirect()->route('kasir.dashboard')
                 ->with('success', 'Selamat datang, ' . $user->full_name . '!'),
-            default => redirect()->route('dashboard')
-                ->with('success', 'Login berhasil!'),
         };
     }
 

@@ -87,7 +87,7 @@ class mentorController extends Controller
         $request->validate([
             'mentor_name'    => 'required',
             'phone_number'   => 'required',
-            'spesialization_id' => 'required|array', // Pastikan mapel dikirim sebagai array
+            'spesialization_id' => 'required|array', 
         ]);
 
         $isActive = $request->has('isActive') ? 1 : 0;
@@ -147,7 +147,7 @@ class mentorController extends Controller
                     return $subject->mapel_name;
                 }),
                 'is_active'     => $mentor->is_active,
-                'created_at'    => $mentor->created_at->format('d M Y H:i'), // Format lebih manusiawi
+                'created_at'    => $mentor->created_at->format('d M Y H:i'), 
                 'updated_at'    => $mentor->updated_at->toISOString(),
             ]);
         }

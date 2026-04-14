@@ -21,7 +21,9 @@ class SubjectsController extends Controller
         })
         ->when($filterbycategory, function ($query) use ($filterbycategory) {
             return $query->where('category_id', $filterbycategory);
-        })->paginate(5) 
+        })
+        ->latest()
+        ->paginate(5) 
         ->withQueryString(); 
 
         return view('Admin.Subjects.index', compact('subjects','categories'));

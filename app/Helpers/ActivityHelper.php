@@ -4,7 +4,6 @@ use App\Models\ActivityLog;
 
 if (!function_exists('logActivity')) {
     /**
-     * Helper global untuk mencatat log aktivitas user.
      *
      * @param string $action Nama aksi/tindakan (contoh: 'Login', 'Checkout Transaksi')
      * @param string|null $description Dekripsi detail opsional

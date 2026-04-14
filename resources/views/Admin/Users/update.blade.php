@@ -93,8 +93,8 @@
                         </div>
 
                         <div class="space-y-2">
-                            <label for="confirm_password" class="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Konfirmasi Password</label>
-                            <input type="password" name="confirm_password" id="confirm_password" 
+                            <label for="password_confirmation" class="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Konfirmasi Password</label>
+                            <input type="password" name="password_confirmation" id="password_confirmation" 
                                 class="block w-full px-4 py-3 rounded-xl border-2 border-gray-100 bg-gray-50/50 text-gray-700 transition-all 
                                 focus:bg-white focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 outline-none placeholder:text-gray-300" 
                                 placeholder="••••••••" value="{{ old('password') }}">
@@ -164,6 +164,23 @@
         const form = document.getElementById('userForm');
         const submitBtn = document.getElementById('submitBtn');
         const submitText = document.getElementById('submitText');
+        const password = document.getElementById('password').value;
+        const confirmPassword = document.getElementById('password_confirmation').value;
+
+        // Validasi Konfirmasi Password
+        if (password && password !== confirmPassword) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Password Tidak Cocok!',
+                text: 'Harap pastikan konfirmasi password sama dengan password yang Anda masukkan.',
+                confirmButtonColor: '#f59e0b',
+                customClass: {
+                    popup: 'rounded-3xl',
+                    confirmButton: 'rounded-xl px-6 py-2'
+                }
+            });
+            return;
+        }
         
         // Validate form
         if (!form.checkValidity()) {
